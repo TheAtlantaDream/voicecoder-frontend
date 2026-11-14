@@ -1,7 +1,3 @@
-export const DEFAULT_BRIDGE_URL = 'ws://localhost:8000/ws'
-
-export const TARGET_SAMPLE_RATE = 16_000
-
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected'
 
 export type LogKind = 'partial' | 'transcript' | 'cleaned' | 'status' | 'error' | 'info'

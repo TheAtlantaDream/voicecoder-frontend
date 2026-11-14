@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { startMicrophone, type MicSession } from './audio.ts'
+import { DEFAULT_BRIDGE_URL } from './env.ts'
 import {
-  DEFAULT_BRIDGE_URL,
   parseServerMessage,
   type ClientMessage,
   type ConnectionStatus,
@@ -112,7 +112,7 @@ export function VoiceCoderProvider({
 
     socket.onerror = () => {
       if (socketGen.current !== generation) return
-      push('websocket error: is the bridge running on :8000?', 'error')
+      push(`websocket error: is the bridge running at ${url}?`, 'error')
     }
 
     socket.onmessage = (event) => {

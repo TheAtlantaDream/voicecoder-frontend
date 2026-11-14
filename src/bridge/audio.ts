@@ -1,10 +1,10 @@
-import { TARGET_SAMPLE_RATE } from './types.ts'
+import { TARGET_SAMPLE_RATE } from './env.ts'
 
 export type MicSession = {
   stop: () => void
 }
 
-// Downsample mic audio to 16 kHz mono Int16 PCM, matching the bridge frames.
+// Downsample mic audio to mono Int16 PCM at TARGET_SAMPLE_RATE.
 export function downsampleToPcm16(input: Float32Array, sampleRate: number): Int16Array {
   const ratio = sampleRate / TARGET_SAMPLE_RATE
   const out = new Int16Array(Math.floor(input.length / ratio))
