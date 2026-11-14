@@ -20,6 +20,8 @@ export function VoiceCoderProvider({
   children,
   url = DEFAULT_BRIDGE_URL,
 }: VoiceCoderProviderProps) {
+  // The React compiler drops the socket effect in this component.
+  "use no memo";
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [listening, setListening] = useState(false)
   const [events, setEvents] = useState<LogEntry[]>([])
@@ -32,6 +34,8 @@ export function VoiceCoderProvider({
   const micRef = useRef<MicSession | null>(null)
   const micGen = useRef(0)
   const logId = useRef(0)
+  const holdMic = useRef(false)
+  const openingMic = useRef(false)
 
   const push = useCallback((text: string, kind: LogKind) => {
     const id = ++logId.current
@@ -80,22 +84,16 @@ export function VoiceCoderProvider({
     [push],
   )
 
-  const disconnect = useCallback(() => {
-    stopMic()
-    socketGen.current += 1
-    socketRef.current?.close()
-    socketRef.current = null
-    setStatus('disconnected')
-  }, [stopMic])
-
-  const connect = useCallback(() => {
-    stopMic()
+  const openSocket = useCallback(() => {
     const generation = ++socketGen.current
     socketRef.current?.close()
 
-    setStatus('connecting')
     const socket = new WebSocket(url)
     socketRef.current = socket
+    queueMicrotask(() => {
+      if (socketGen.current !== generation || socket.readyState !== WebSocket.CONNECTING) return
+      setStatus('connecting')
+    })
 
     socket.onopen = () => {
       if (socketGen.current !== generation) return
@@ -106,7 +104,10 @@ export function VoiceCoderProvider({
     socket.onclose = () => {
       if (socketGen.current !== generation) return
       socketRef.current = null
-      stopMic()
+      micGen.current += 1
+      micRef.current?.stop()
+      micRef.current = null
+      setListening(false)
       setStatus('disconnected')
     }
 
@@ -130,12 +131,27 @@ export function VoiceCoderProvider({
         push(event.data, 'info')
       }
     }
-  }, [applyMessage, push, stopMic, url])
+  }, [applyMessage, push, url])
+
+  const disconnect = useCallback(() => {
+    stopMic()
+    socketGen.current += 1
+    socketRef.current?.close()
+    socketRef.current = null
+    setStatus('disconnected')
+  }, [stopMic])
+
+  const connect = useCallback(() => {
+    stopMic()
+    setStatus('connecting')
+    openSocket()
+  }, [openSocket, stopMic])
 
   const startTalking = useCallback(async () => {
     const socket = socketRef.current
     if (!socket || socket.readyState !== WebSocket.OPEN) return
 
+    holdMic.current = false
     const generation = ++micGen.current
     try {
       const session = await startMicrophone((pcm) => {
@@ -161,6 +177,7 @@ export function VoiceCoderProvider({
 
   const stopTalking = useCallback(() => {
     if (!micRef.current) return
+    holdMic.current = true
     stopMic()
     push('ended, waiting for transcript...', 'info')
   }, [push, stopMic])
@@ -178,15 +195,25 @@ export function VoiceCoderProvider({
   }, [])
 
   useEffect(() => {
+    openSocket()
     return () => {
       socketGen.current += 1
       micGen.current += 1
       micRef.current?.stop()
       micRef.current = null
-      socketRef.current?.close()
+      const socket = socketRef.current
       socketRef.current = null
+      socket?.close()
     }
-  }, [])
+  }, [openSocket])
+
+  useEffect(() => {
+    if (status !== 'connected' || listening || holdMic.current || openingMic.current) return
+    openingMic.current = true
+    void startTalking().finally(() => {
+      openingMic.current = false
+    })
+  }, [listening, startTalking, status])
 
   const value = useMemo<VoiceCoderContextValue>(
     () => ({
