@@ -4,11 +4,15 @@
   height: 100%;
 }
 
+/* Exactly the space under the header: the panel and the editor each scroll
+   inside their own box, so the page itself never grows. (No wrapping here:
+   a wrapping flex row grows to its tallest item.) */
 .workspace {
   display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
   min-height: 0;
+  overflow: hidden;
 }
 
 .workspace__panel {
@@ -21,6 +25,7 @@
 
 .workspace__panel > .activity {
   flex: 1 1 auto;
+  min-height: 0;
 }
 
 .workspace__splitter {
@@ -63,9 +68,16 @@
     min-height: 100%;
   }
 
+  .workspace {
+    flex: none;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  /* Fixed height so the activity log still scrolls inside its own box. */
   .workspace__panel {
     flex: 1 1 100%;
-    min-height: 60vh;
+    height: 60vh;
   }
 
   .workspace__splitter {
