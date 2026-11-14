@@ -5,7 +5,7 @@ services:
   frontend:
     build: .
     ports:
-      - "8080:80"
+      - "80:80"
     environment:
       DEFAULT_BRIDGE_URL: ws://localhost:8000/ws
       TARGET_SAMPLE_RATE: "16000"
