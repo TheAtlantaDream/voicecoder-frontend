@@ -1,5 +1,5 @@
 export { downsampleToPcm16, startMicrophone, type MicSession } from './audio.ts'
-export { DEFAULT_BRIDGE_URL, TARGET_SAMPLE_RATE } from './env.ts'
+export { DEFAULT_BRIDGE_URL, TARGET_SAMPLE_RATE, VSCODE_WEB_URL } from './env.ts'
 export { VoiceCoderProvider } from './VoiceCoderProvider.tsx'
 export { useVoiceCoder, type VoiceCoderContextValue } from './useVoiceCoder.ts'
 export {

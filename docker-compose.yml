@@ -1,0 +1,28 @@
+# The voice bridge stays on the host at ws://localhost:8000/ws.
+# VS Code is served at /vscode/ so the editor iframe is same-origin.
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      DEFAULT_BRIDGE_URL: ws://localhost:8000/ws
+      TARGET_SAMPLE_RATE: "16000"
+      VSCODE_WEB_URL: /vscode/
+    depends_on:
+      - vscode-web
+
+  vscode-web:
+    image: gitpod/openvscode-server:latest
+    init: true
+    command:
+      - --server-base-path=/vscode
+      - --accept-server-license-terms
+    ports:
+      - "3000:3000"
+    volumes:
+      - vscode-workspace:/home/workspace
+
+volumes:
+  vscode-workspace:

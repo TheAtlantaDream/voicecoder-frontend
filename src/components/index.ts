@@ -1,5 +1,5 @@
 export { BridgeStatus } from './BridgeStatus.tsx'
-export { BridgeTest } from './BridgeTest.tsx'
 export { EventLog } from './EventLog.tsx'
 export { TalkControls } from './TalkControls.tsx'
 export { TextPrompt } from './TextPrompt.tsx'
+export { Workspace } from './Workspace.tsx'
