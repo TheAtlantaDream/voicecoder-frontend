@@ -23,6 +23,13 @@
   min-height: 0;
   padding: 10px 24px 20px;
   overflow: auto;
+  /* Scrollbar hidden visually; the log still scrolls with the wheel, touch and
+     the keyboard (it is focusable), and auto-follows new entries. */
+  scrollbar-width: none;
+}
+
+.activity__log::-webkit-scrollbar {
+  display: none;
 }
 
 @media (forced-colors: active) {

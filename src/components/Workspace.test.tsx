@@ -253,7 +253,7 @@ describe('activity entries', () => {
     expect(card).toHaveTextContent('Finished in 1 s')
     expect(card).toHaveTextContent('I added <b>tests</b>.')
     expect(card.querySelector('b')).toBeNull()
-    expect(card).toHaveTextContent('2 files with unapproved changes')
+    expect(card).toHaveTextContent('2 files changed by this request')
     expect(card).toHaveTextContent('Say “approve” to keep these changes, or ask me to undo them.')
     expect(card).not.toHaveTextContent(/reject/i)
     expect(within(log()).getByText(/listening for your next request/i)).toBeInTheDocument()

@@ -63,7 +63,7 @@ function RunCard({ run, onStop }: { run: Run; onStop: () => void }) {
             </svg>
             <span>
               <strong>
-                {run.diffFiles === 1 ? '1 file' : `${run.diffFiles} files`} with unapproved changes
+                {run.diffFiles === 1 ? '1 file' : `${run.diffFiles} files`} changed by this request
               </strong>{' '}
               — open in the editor.
             </span>
