@@ -1,4 +1,4 @@
-const FALLBACK_BRIDGE_URL = 'ws://localhost:8000/ws'
+const FALLBACK_BRIDGE_URL = '/ws'
 const FALLBACK_SAMPLE_RATE = 16_000
 
 type VoiceCoderRuntimeConfig = {
@@ -33,7 +33,15 @@ function readSetting(name: SettingName): string | undefined {
   return undefined
 }
 
-export const DEFAULT_BRIDGE_URL = readSetting('DEFAULT_BRIDGE_URL') ?? FALLBACK_BRIDGE_URL
+function resolveBridgeUrl(raw: string): string {
+  if (/^wss?:\/\//i.test(raw)) return raw
+  if (typeof window === 'undefined') return raw
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const path = raw.startsWith('/') ? raw : `/${raw}`
+  return `${protocol}//${window.location.host}${path}`
+}
+
+export const DEFAULT_BRIDGE_URL = resolveBridgeUrl(readSetting('DEFAULT_BRIDGE_URL') ?? FALLBACK_BRIDGE_URL)
 
 function readSampleRate(): number {
   const raw = readSetting('TARGET_SAMPLE_RATE')

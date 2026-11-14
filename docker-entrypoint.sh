@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-bridge_url="${DEFAULT_BRIDGE_URL:-ws://localhost:8000/ws}"
+bridge_url="${DEFAULT_BRIDGE_URL:-/ws}"
 sample_rate="${TARGET_SAMPLE_RATE:-16000}"
 vscode_url="${VSCODE_WEB_URL:-/vscode/}"
 

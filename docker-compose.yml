@@ -1,13 +1,14 @@
-# The voice bridge stays on the host at ws://localhost:8000/ws.
+# The page opens the bridge at /ws on this same origin. Nginx proxies that to the bridge.
 # VS Code is served at /vscode/ so the editor iframe is same-origin.
+# Publish specs are host:container. Coder overrides them with a free host port per workspace.
 
 services:
   frontend:
     build: .
     ports:
-      - "80:80"
+      - "${FRONTEND_PUBLISH:-80:80}"
     environment:
-      DEFAULT_BRIDGE_URL: ws://localhost:8000/ws
+      DEFAULT_BRIDGE_URL: /ws
       TARGET_SAMPLE_RATE: "16000"
       VSCODE_WEB_URL: /vscode/
     depends_on:
@@ -17,12 +18,17 @@ services:
     image: gitpod/openvscode-server:latest
     init: true
     command:
+      - --host=0.0.0.0
+      - --port=3000
+      - --without-connection-token
       - --server-base-path=/vscode
-      - --accept-server-license-terms
+      - --default-folder=/home/workspace/project
     ports:
-      - "3000:3000"
+      - "${VSCODE_PUBLISH:-3000:3000}"
     volumes:
       - vscode-workspace:/home/workspace
 
 volumes:
   vscode-workspace:
+    name: ${VC_HOME_VOLUME:-voicecoder-vscode-workspace}
+    external: ${VC_HOME_EXTERNAL:-false}
