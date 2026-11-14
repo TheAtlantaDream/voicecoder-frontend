@@ -65,9 +65,8 @@ describe('Workspace layout', () => {
     expect(editor).toHaveAttribute('src', '/vscode/?folder=/home/workspace/project')
   })
 
-  it('no longer renders the typed prompt or the old Connect/Start/End buttons', () => {
+  it('no longer renders the old Connect/Start/End buttons', () => {
     renderWith()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /connect|start talking|^end$|send as text/i })).not.toBeInTheDocument()
   })
 
@@ -100,6 +99,41 @@ describe('mic toggle', () => {
     expect(screen.getByRole('button', { name: /mic on/i })).toBeInTheDocument()
     await user.keyboard(' ')
     expect(screen.getByRole('button', { name: /mic off/i })).toBeInTheDocument()
+  })
+})
+
+describe('typed requests', () => {
+  it('sends the trimmed text, clears the box and keeps focus there', async () => {
+    const { value } = renderWith()
+    const user = userEvent.setup()
+    const input = screen.getByRole('textbox', { name: /or type a request/i })
+    await user.type(input, '  add a test for login  {Enter}')
+    expect(value.sendText).toHaveBeenCalledWith('add a test for login')
+    expect(input).toHaveValue('')
+    expect(input).toHaveFocus()
+  })
+
+  it('also sends with the Send button, and ignores an empty box', async () => {
+    const { value } = renderWith()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    expect(value.sendText).not.toHaveBeenCalled()
+    await user.type(screen.getByRole('textbox'), 'rename foo')
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    expect(value.sendText).toHaveBeenCalledWith('rename foo')
+  })
+
+  it('is disabled with an explanation while disconnected', () => {
+    renderWith({ status: 'disconnected' })
+    const input = screen.getByRole('textbox', { name: /or type a request/i })
+    expect(input).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(input).toHaveAccessibleDescription(/once voicecoder reconnects/i)
+  })
+
+  it('sits outside the log so typing is never announced as activity', () => {
+    renderWith()
+    expect(within(screen.getByRole('log')).queryByRole('textbox')).not.toBeInTheDocument()
   })
 })
 

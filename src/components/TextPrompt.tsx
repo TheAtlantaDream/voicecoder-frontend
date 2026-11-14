@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useVoiceCoder } from '../bridge/index.ts'
+import './TextPrompt.css'
 
+/**
+ * Typed requests, for when speaking isn't practical. Sends the bridge's `text`
+ * message, which doesn't need the wake phrase. The mic keeps working alongside it.
+ */
 export function TextPrompt() {
   const { status, sendText } = useVoiceCoder()
   const [text, setText] = useState('')
@@ -8,22 +13,35 @@ export function TextPrompt() {
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!connected || !text) return
-    sendText(text)
+    const request = text.trim()
+    if (!connected || !request) return
+    sendText(request)
     setText('')
   }
 
   return (
-    <form className="bridge-compose" onSubmit={onSubmit}>
-      <input
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        placeholder="or type a prompt, e.g. hey VoiceCoder fix the login bug in auth dot py"
-        aria-label="Prompt"
-      />
-      <button type="submit" disabled={!connected || !text}>
-        Send as text
-      </button>
+    <form className="prompt" onSubmit={onSubmit}>
+      <label className="prompt__label" htmlFor="prompt-input">
+        Or type a request
+      </label>
+      <div className="prompt__row">
+        <input
+          id="prompt-input"
+          className="prompt__input"
+          type="text"
+          autoComplete="off"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          disabled={!connected}
+          aria-describedby="prompt-hint"
+        />
+        <button type="submit" className="prompt__send" disabled={!connected}>
+          Send
+        </button>
+      </div>
+      <p id="prompt-hint" className="prompt__hint">
+        {connected ? 'No wake phrase needed. Press Enter to send.' : 'Typing is available once VoiceCoder reconnects.'}
+      </p>
     </form>
   )
 }

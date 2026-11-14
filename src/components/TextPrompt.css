@@ -1,0 +1,68 @@
+/* Sits at the bottom of the sage activity panel, below the scrolling log. */
+.prompt {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 24px 18px;
+  border-top: 2px solid var(--on-sage);
+  color: var(--on-sage);
+}
+
+.prompt__label {
+  font: 14px var(--font-activity);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.prompt__row {
+  display: flex;
+  gap: 10px;
+}
+
+.prompt__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid var(--on-sage);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px var(--font-ui);
+}
+
+.prompt__send {
+  flex: none;
+  min-height: 44px;
+  min-width: 88px;
+  padding: 0 18px;
+  border: 2px solid var(--on-sage);
+  border-radius: 10px;
+  background: var(--on-sage);
+  color: var(--text);
+  font: 600 16px var(--font-ui);
+  cursor: pointer;
+}
+
+.prompt__send:hover {
+  background: var(--bg-deep);
+  text-decoration: underline;
+}
+
+.prompt__input:disabled,
+.prompt__send:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.prompt__hint {
+  margin: 0;
+  font: 16px var(--font-activity);
+}
+
+@media (forced-colors: active) {
+  .prompt {
+    border-top-color: CanvasText;
+  }
+}

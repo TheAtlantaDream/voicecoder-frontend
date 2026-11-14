@@ -4,6 +4,7 @@ import { useVoiceCoder } from '../bridge/index.ts'
 import { BridgeStatus, type Connection } from './BridgeStatus.tsx'
 import { ConnectionAlert } from './ConnectionAlert.tsx'
 import { EventLog } from './EventLog.tsx'
+import { TextPrompt } from './TextPrompt.tsx'
 import './Workspace.css'
 
 const PANEL_KEY = 'voicecoder.panelPercent'
@@ -100,7 +101,7 @@ export function Workspace() {
       {connection === 'reconnecting' && <ConnectionAlert />}
       <main ref={mainRef} className="workspace">
         <div className="workspace__panel">
-          <EventLog entries={activity.entries} onStop={stopTask} />
+          <EventLog entries={activity.entries} onStop={stopTask} footer={<TextPrompt />} />
         </div>
         {/* A focusable role="separator" is an interactive widget (WAI-ARIA window splitter),
             which jsx-a11y doesn't model. */}

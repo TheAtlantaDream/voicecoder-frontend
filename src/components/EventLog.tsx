@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { ActivityEntry } from '../bridge/activity.ts'
 import { ActivityEntryView } from './ActivityEntryView.tsx'
 import './EventLog.css'
@@ -8,13 +8,15 @@ const BOTTOM_SLACK_PX = 24
 type Props = {
   entries: ActivityEntry[]
   onStop: () => void
+  /** Pinned below the scrolling log (the typed-request form). */
+  footer?: ReactNode
 }
 
 /**
  * The sage activity panel. The role="log" container is always mounted; it
  * only auto-scrolls when the user is already at the bottom.
  */
-export function EventLog({ entries, onStop }: Props) {
+export function EventLog({ entries, onStop, footer }: Props) {
   const logRef = useRef<HTMLDivElement>(null)
   const [atBottom, setAtBottom] = useState(true)
 
@@ -47,6 +49,7 @@ export function EventLog({ entries, onStop }: Props) {
           <ActivityEntryView key={entry.key} entry={entry} onStop={onStop} />
         ))}
       </div>
+      {footer}
     </section>
   )
 }
