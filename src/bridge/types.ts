@@ -8,6 +8,7 @@ export type LogKind =
   | 'error'
   | 'info'
   | 'agent_result'
+  | 'agent_partial'
 
 export type LogEntry = {
   id: number
@@ -21,6 +22,7 @@ export type CleanedMessage = { type: 'cleaned'; text: string }
 export type StatusMessage = { type: 'status'; text: string }
 export type ErrorMessage = { type: 'error'; text: string }
 export type AgentResultMessage = { type: 'agent_result'; text: string; diff: string }
+export type AgentPartialMessage = { type: 'agent_partial'; text: string }
 
 export type ServerMessage =
   | PartialMessage
@@ -29,10 +31,12 @@ export type ServerMessage =
   | StatusMessage
   | ErrorMessage
   | AgentResultMessage
+  | AgentPartialMessage
 
 export type ClientMessage =
   | { type: 'start' }
   | { type: 'end' }
+  | { type: 'stop' }
   | { type: 'text'; text: string }
 
 export function parseServerMessage(value: unknown): ServerMessage | null {
@@ -56,6 +60,8 @@ export function parseServerMessage(value: unknown): ServerMessage | null {
       return { type: 'status', text }
     case 'error':
       return { type: 'error', text }
+    case 'agent_partial':
+      return { type: 'agent_partial', text }
     case 'agent_result':
       return {
         type: 'agent_result',

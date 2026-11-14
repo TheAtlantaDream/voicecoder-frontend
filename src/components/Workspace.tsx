@@ -6,7 +6,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { VSCODE_WEB_URL } from '../bridge/index.ts'
+import { useVoiceCoder } from '../bridge/index.ts'
 import './bridge.css'
 import { BridgeStatus } from './BridgeStatus.tsx'
 import { EventLog } from './EventLog.tsx'
@@ -34,6 +34,7 @@ function clampSidebar(next: number, containerWidth: number): number {
 }
 
 export function Workspace() {
+  const { editorSrc } = useVoiceCoder()
   const workspaceRef = useRef<HTMLDivElement>(null)
   const resizingRef = useRef(false)
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
@@ -98,7 +99,7 @@ export function Workspace() {
       <iframe
         className="editor-frame"
         title="VS Code"
-        src={VSCODE_WEB_URL}
+        src={editorSrc}
         allow="clipboard-read; clipboard-write"
       />
       <button

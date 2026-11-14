@@ -5,16 +5,17 @@ export type VoiceCoderContextValue = {
   url: string
   status: ConnectionStatus
   listening: boolean
+  muted: boolean
   events: LogEntry[]
   partial: string | null
   transcript: string | null
   cleaned: string | null
   agentSummary: string | null
   agentDiff: string | null
+  editorSrc: string
   connect: () => void
   disconnect: () => void
-  startTalking: () => Promise<void>
-  stopTalking: () => void
+  setMuted: (muted: boolean) => void
   sendText: (text: string) => void
   clearEvents: () => void
 }
