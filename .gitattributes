@@ -1,0 +1,5 @@
+# Files that run inside Linux containers must keep LF endings, even on Windows
+# checkouts with core.autocrlf=true (CRLF breaks `set -eu` in the entrypoint).
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+nginx.conf    text eol=lf
