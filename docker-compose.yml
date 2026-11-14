@@ -1,10 +1,13 @@
 # The page opens the bridge at /ws on this same origin. Nginx proxies that to the bridge.
 # VS Code is served at /vscode/ so the editor iframe is same-origin.
 # Publish specs are host:container. Coder overrides them with a free host port per workspace.
+# image: tags are host-wide so every Coder workspace reuses the same build.
 
 services:
   frontend:
+    image: voicecoder-frontend:latest
     build: .
+    restart: unless-stopped
     ports:
       - "${FRONTEND_PUBLISH:-80:80}"
     environment:
@@ -17,6 +20,7 @@ services:
   vscode-web:
     image: gitpod/openvscode-server:latest
     init: true
+    restart: unless-stopped
     command:
       - --host=0.0.0.0
       - --port=3000
