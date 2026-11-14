@@ -13,11 +13,20 @@ function editorBase(): string {
 
 /** Open the project folder in the editor iframe. */
 export function editorFolderSrc(): string {
-  return `${editorBase()}/?folder=${EDITOR_FOLDER}`
+  return `${editorBase()}/?folder=${encodeURIComponent(EDITOR_FOLDER)}`
 }
 
-/** Open the latest agent diff in the editor iframe (cache-busted). */
+/**
+ * Open the latest agent diff in the editor iframe.
+ * Uses VS Code web's `payload` openFile (same as code-server / vscode.dev).
+ */
 export function editorDiffSrc(bust = Date.now()): string {
-  // openvscode opens a file with &/absolute/path after ?folder=...
-  return `${editorBase()}/?folder=${EDITOR_FOLDER}&${LATEST_DIFF_FILE}&t=${bust}`
+  const host = typeof window !== 'undefined' ? window.location.host : 'localhost'
+  const openFile = `vscode-remote://${host}${LATEST_DIFF_FILE}`
+  const payload = JSON.stringify([['openFile', openFile]])
+  return (
+    `${editorBase()}/?folder=${encodeURIComponent(EDITOR_FOLDER)}` +
+    `&payload=${encodeURIComponent(payload)}` +
+    `&t=${bust}`
+  )
 }
