@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ConnectionStatus, LogEntry } from './types.ts'
+import type { ConnectionStatus, LogEntry, TimedMessage } from './types.ts'
 
 export type VoiceCoderContextValue = {
   url: string
@@ -7,6 +7,8 @@ export type VoiceCoderContextValue = {
   listening: boolean
   muted: boolean
   events: LogEntry[]
+  /** Every parsed bridge message in arrival order, with the time it arrived. */
+  messages: TimedMessage[]
   partial: string | null
   transcript: string | null
   cleaned: string | null
@@ -17,6 +19,8 @@ export type VoiceCoderContextValue = {
   disconnect: () => void
   setMuted: (muted: boolean) => void
   sendText: (text: string) => void
+  /** Cancels the running agent task (sends `stop`). */
+  stopTask: () => void
   clearEvents: () => void
 }
 

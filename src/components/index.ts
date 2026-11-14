@@ -1,4 +1,6 @@
+export { ActivityEntryView } from './ActivityEntryView.tsx'
 export { BridgeStatus } from './BridgeStatus.tsx'
+export { ConnectionAlert } from './ConnectionAlert.tsx'
 export { EventLog } from './EventLog.tsx'
 export { TalkControls } from './TalkControls.tsx'
 export { TextPrompt } from './TextPrompt.tsx'

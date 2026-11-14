@@ -1,0 +1,256 @@
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { axe } from 'vitest-axe'
+import { VoiceCoderContext, type VoiceCoderContextValue } from '../bridge/useVoiceCoder.ts'
+import type { LogEntry, ServerMessage } from '../bridge/types.ts'
+import { Workspace } from './Workspace.tsx'
+
+const CONNECTED: LogEntry[] = [{ id: 1, text: 'connected', kind: 'status' }]
+
+function makeValue(overrides: Partial<VoiceCoderContextValue> = {}): VoiceCoderContextValue {
+  return {
+    url: 'ws://test/ws',
+    status: 'connected',
+    listening: true,
+    muted: false,
+    events: CONNECTED,
+    messages: [],
+    partial: null,
+    transcript: null,
+    cleaned: null,
+    agentSummary: null,
+    agentDiff: null,
+    editorSrc: '/vscode/?folder=/home/workspace/project',
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    setMuted: vi.fn(),
+    sendText: vi.fn(),
+    stopTask: vi.fn(),
+    clearEvents: vi.fn(),
+    ...overrides,
+  }
+}
+
+const at = (...messages: ServerMessage[]) => messages.map((message, i) => ({ message, at: i * 1000 }))
+
+function renderWith(overrides: Partial<VoiceCoderContextValue> = {}) {
+  const value = makeValue(overrides)
+  const utils = render(
+    <VoiceCoderContext value={value}>
+      <Workspace />
+    </VoiceCoderContext>,
+  )
+  return { value, ...utils }
+}
+
+const UTTERANCE: ServerMessage[] = [
+  { type: 'partial', seq: 0, text: 'hey VoiceCoder add a test' },
+  { type: 'transcript', text: 'hey VoiceCoder add a test' },
+  { type: 'cleaned', text: 'add a test' },
+]
+const WORKING: ServerMessage = { type: 'status', text: 'Working on it.' }
+
+beforeEach(() => localStorage.clear())
+
+describe('Workspace layout', () => {
+  it('puts the activity panel before the editor, with one status and one log', () => {
+    renderWith()
+    const log = screen.getByRole('log', { name: /activity/i })
+    const editor = screen.getByTitle('Code editor')
+    expect(log.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getAllByRole('log')).toHaveLength(1)
+    expect(editor).toHaveAttribute('src', '/vscode/?folder=/home/workspace/project')
+  })
+
+  it('no longer renders the typed prompt or the old Connect/Start/End buttons', () => {
+    renderWith()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /connect|start talking|^end$|send as text/i })).not.toBeInTheDocument()
+  })
+
+  it('has no axe violations', async () => {
+    const { container } = renderWith({ messages: at(...UTTERANCE, WORKING) })
+    // jsdom can't host the cross-frame axe run, so the iframe itself is skipped.
+    expect(await axe(container, { iframes: false })).toHaveNoViolations()
+  })
+})
+
+describe('mic toggle', () => {
+  function Stateful() {
+    const [muted, setMuted] = useState(false)
+    return (
+      <VoiceCoderContext value={makeValue({ muted, setMuted })}>
+        <Workspace />
+      </VoiceCoderContext>
+    )
+  }
+
+  it('is a pressed toggle that switches on click, Enter and Space', async () => {
+    render(<Stateful />)
+    const user = userEvent.setup()
+    expect(screen.getByRole('button', { name: /mic on/i })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /mic/i }))
+    expect(screen.getByRole('button', { name: /mic off/i })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('status')).toHaveTextContent('Paused')
+    expect(screen.getByRole('heading', { name: /microphone paused/i })).toBeInTheDocument()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: /mic on/i })).toBeInTheDocument()
+    await user.keyboard(' ')
+    expect(screen.getByRole('button', { name: /mic off/i })).toBeInTheDocument()
+  })
+})
+
+describe('splitter', () => {
+  it('is a focusable vertical separator resized with arrows, Home and End', async () => {
+    renderWith()
+    const splitter = screen.getByRole('separator', { name: /resize transcript panel/i })
+    expect(splitter).toHaveAttribute('aria-orientation', 'vertical')
+    expect(splitter).toHaveAttribute('aria-valuenow', '36')
+    const user = userEvent.setup()
+    splitter.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(splitter).toHaveAttribute('aria-valuenow', '41')
+    await user.keyboard('{ArrowLeft}{ArrowLeft}')
+    expect(splitter).toHaveAttribute('aria-valuenow', '31')
+    await user.keyboard('{End}')
+    expect(splitter).toHaveAttribute('aria-valuenow', '60')
+    await user.keyboard('{Home}')
+    expect(splitter).toHaveAttribute('aria-valuenow', '25')
+    expect(localStorage.getItem('voicecoder.panelPercent')).toBe('25')
+  })
+
+  it('sets the width through a CSS custom property, not an inline style in JSX', async () => {
+    renderWith()
+    const main = screen.getByRole('main')
+    await act(async () => {
+      fireEvent.keyDown(screen.getByRole('separator'), { key: 'End' })
+    })
+    expect(main.style.getPropertyValue('--panel-width')).toBe('60%')
+  })
+})
+
+describe('header status and connection', () => {
+  it.each([
+    [[], 'Listening for “hey VoiceCoder”'],
+    [[{ type: 'partial', seq: 0, text: 'hey' }], 'Hearing you…'],
+    [UTTERANCE.slice(0, 2), 'Processing — hold on'],
+    [[...UTTERANCE, WORKING], 'Agent working…'],
+  ] as [ServerMessage[], string][])('shows the right status', (messages, text) => {
+    renderWith({ messages: at(...messages) })
+    expect(screen.getByRole('status')).toHaveTextContent(text)
+  })
+
+  it('shows Connected with a filled dot', () => {
+    renderWith()
+    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows "Connecting" without the alert before the first connection', () => {
+    renderWith({ status: 'connecting', events: [] })
+    expect(screen.getByRole('status')).toHaveTextContent('Connecting…')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows the lost-connection alert after a drop', () => {
+    renderWith({ status: 'disconnected' })
+    expect(screen.getByRole('alert')).toHaveTextContent('Lost connection to VoiceCoder.')
+    expect(screen.getByRole('status')).toHaveTextContent('Reconnecting…')
+  })
+
+  it('announces "Agent finished" once through the status region', () => {
+    renderWith({ messages: at(...UTTERANCE, WORKING, { type: 'agent_result', text: 'Done.', diff: '' }) })
+    expect(screen.getByRole('status')).toHaveTextContent('Agent finished')
+  })
+})
+
+describe('activity entries', () => {
+  const log = () => screen.getByRole('log')
+
+  it('intro', () => {
+    renderWith()
+    expect(within(log()).getByRole('heading', { name: /listening\.\s*say “hey voicecoder” to start/i })).toBeInTheDocument()
+  })
+
+  it('live partials are hidden from screen readers', () => {
+    renderWith({ messages: at({ type: 'partial', seq: 0, text: 'hey VoiceCoder' }) })
+    const live = within(log()).getByText(/you · live/i).closest('[aria-hidden]')
+    expect(live).toHaveAttribute('aria-hidden', 'true')
+    expect(live).toHaveTextContent('hey VoiceCoder')
+  })
+
+  it('you said + processing', () => {
+    renderWith({ messages: at(...UTTERANCE.slice(0, 2)) })
+    expect(within(log()).getByText(/^you said$/i)).toBeInTheDocument()
+    expect(within(log()).getByText(/processing what you said/i)).toBeInTheDocument()
+  })
+
+  it('sent to agent', () => {
+    renderWith({ messages: at(...UTTERANCE) })
+    expect(within(log()).getByRole('region', { name: 'Sent to agent' })).toHaveTextContent('add a test')
+  })
+
+  it('agent working: busy card, progress and a Stop task button', async () => {
+    const { value } = renderWith({
+      messages: at(...UTTERANCE, WORKING, { type: 'status', text: 'Still working, 10 seconds so far.' }),
+    })
+    const card = within(log()).getByRole('region', { name: 'Agent' })
+    expect(card).toHaveAttribute('aria-busy', 'true')
+    expect(card).toHaveTextContent('Working on it.')
+    expect(card).toHaveTextContent('Still working, 10 seconds so far.')
+    await userEvent.click(within(card).getByRole('button', { name: /stop task/i }))
+    expect(value.stopTask).toHaveBeenCalledOnce()
+  })
+
+  it('agent working: streamed reply text', () => {
+    renderWith({ messages: at(...UTTERANCE, WORKING, { type: 'agent_partial', text: 'I am adding a test' }) })
+    expect(within(log()).getByRole('region', { name: 'Agent' })).toHaveTextContent('I am adding a test')
+  })
+
+  it('agent result: plain-text summary, file count, approve hint, then ready', () => {
+    const diff = 'diff --git a/a.py b/a.py\n+x\ndiff --git a/b.py b/b.py\n+y\n'
+    renderWith({
+      messages: at(...UTTERANCE, WORKING, { type: 'agent_result', text: 'I added <b>tests</b>.', diff }),
+    })
+    const card = within(log()).getByRole('region', { name: 'Agent' })
+    expect(card).toHaveTextContent('Finished in 1 s')
+    expect(card).toHaveTextContent('I added <b>tests</b>.')
+    expect(card.querySelector('b')).toBeNull()
+    expect(card).toHaveTextContent('2 files with unapproved changes')
+    expect(card).toHaveTextContent('Say “approve” to keep these changes, or ask me to undo them.')
+    expect(card).not.toHaveTextContent(/reject/i)
+    expect(within(log()).getByText(/listening for your next request/i)).toBeInTheDocument()
+  })
+
+  it('stopped', () => {
+    renderWith({
+      messages: at(...UTTERANCE, WORKING, { type: 'status', text: 'Stopped. Some files may have changed.' }),
+    })
+    expect(within(log()).getByRole('region', { name: 'Agent' })).toHaveTextContent('Stopped. Some files may have changed.')
+    expect(screen.getByRole('status')).toHaveTextContent('Agent stopped')
+  })
+
+  it('no speech', () => {
+    renderWith({ messages: at({ type: 'error', text: 'I did not hear anything. Try again, a little closer to the mic.' }) })
+    expect(within(log()).getByText('I did not hear anything.')).toBeInTheDocument()
+    expect(within(log()).getByText(/still listening/i)).toBeInTheDocument()
+  })
+
+  it('wake phrase reminder', () => {
+    renderWith({
+      messages: at(
+        { type: 'transcript', text: 'add a test' },
+        { type: 'status', text: 'Say hey VoiceCoder, hey Coder, or Coder, then your request.' },
+      ),
+    })
+    expect(within(log()).getByText(/didn’t hear the wake phrase/i)).toBeInTheDocument()
+  })
+
+  it('other errors show the bridge text', () => {
+    renderWith({ messages: at({ type: 'error', text: 'Something else broke' }) })
+    expect(within(log()).getByText('Something else broke')).toBeInTheDocument()
+  })
+})

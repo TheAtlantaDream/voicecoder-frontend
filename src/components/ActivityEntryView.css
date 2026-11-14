@@ -1,0 +1,198 @@
+.entry p {
+  margin: 0;
+}
+
+/* Uppercase tracked labels: the only place Abel may go below 16px. */
+.label {
+  display: block;
+  font: 14px var(--font-activity);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Sage labels only ever sit on the dark cards. */
+.label--sage {
+  color: var(--sage);
+}
+
+/* ---------- on the sage panel ---------- */
+
+.intro__title {
+  margin: 0 0 12px;
+  font: 400 34px/1.2 var(--font-activity);
+}
+
+.you__text {
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.you__caret {
+  margin-left: 2px;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 2px solid var(--on-sage);
+  border-radius: 10px;
+}
+
+.box--dashed {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  border-style: dashed;
+}
+
+.box--ready {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.box__title {
+  font-size: 21px;
+}
+
+.box__ring {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.box__dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--on-sage);
+}
+
+/* ---------- dark cards ---------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid transparent; /* visible as a border in forced colors */
+  border-radius: 10px;
+  color: var(--text);
+}
+
+.card--sent {
+  background: var(--bg);
+}
+
+.card--agent {
+  gap: 12px;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--bg-deep);
+}
+
+.card--result {
+  gap: 14px;
+}
+
+.card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card__time {
+  color: var(--text-muted);
+  font: 15px var(--font-ui);
+}
+
+.card__headline {
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.card__text,
+.card__summary {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.card__summary {
+  line-height: 1.6;
+}
+
+.card__soft {
+  color: var(--text-soft);
+  font-size: 17px;
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.card__divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.card__files {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card__file-icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  flex: none;
+  color: var(--sage);
+}
+
+.card__hint {
+  color: var(--sage);
+}
+
+.stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 2px solid var(--text);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: 600 16px var(--font-ui);
+  cursor: pointer;
+}
+
+.stop:hover {
+  background: var(--bg);
+  text-decoration: underline;
+}
+
+.stop__icon {
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+}
+
+@media (forced-colors: active) {
+  .box__dot,
+  .stop__icon {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

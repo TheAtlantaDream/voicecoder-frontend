@@ -29,17 +29,8 @@ export default defineConfig([
           message: 'No inline styles: put styling in the component CSS file using tokens.css variables.',
         },
       ],
-      // The activity scroll region must be keyboard-scrollable.
-      'jsx-a11y/no-noninteractive-tabindex': ['error', { roles: ['region'] }],
-    },
-  },
-  {
-    // The teammate's bridge page predates the CLAUDE.md rules. Keep its issues
-    // visible as warnings instead of failing lint; see BRIDGE_INTEGRATION.md.
-    files: ['src/bridge/**/*.{ts,tsx}', 'src/components/{Workspace,BridgeStatus,EventLog,TalkControls,TextPrompt}.tsx'],
-    rules: {
-      'no-restricted-syntax': 'warn',
-      'jsx-a11y/role-supports-aria-props': 'warn',
+      // Scrollable regions/logs must be keyboard-scrollable; the splitter is a focusable separator.
+      'jsx-a11y/no-noninteractive-tabindex': ['error', { roles: ['region', 'log', 'separator'] }],
     },
   },
   {

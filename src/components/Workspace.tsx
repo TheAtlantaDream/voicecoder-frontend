@@ -1,127 +1,138 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-} from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { deriveActivity } from '../bridge/activity.ts'
 import { useVoiceCoder } from '../bridge/index.ts'
-import './bridge.css'
-import { BridgeStatus } from './BridgeStatus.tsx'
+import { BridgeStatus, type Connection } from './BridgeStatus.tsx'
+import { ConnectionAlert } from './ConnectionAlert.tsx'
 import { EventLog } from './EventLog.tsx'
-import { TalkControls } from './TalkControls.tsx'
-import { TextPrompt } from './TextPrompt.tsx'
+import './Workspace.css'
 
-const SIDEBAR_KEY = 'voicecoder.sidebarWidth'
-const DEFAULT_SIDEBAR = 320
-const MIN_SIDEBAR = 220
-const MIN_EDITOR = 360
+const PANEL_KEY = 'voicecoder.panelPercent'
+const DEFAULT_PANEL = 36
+const MIN_PANEL = 25
+const MAX_PANEL = 60
+const STEP = 5
 
-function readSidebarWidth(): number {
+const clampPanel = (value: number) => Math.min(MAX_PANEL, Math.max(MIN_PANEL, Math.round(value)))
+
+function readPanelPercent(): number {
   try {
-    const parsed = Number(localStorage.getItem(SIDEBAR_KEY))
-    if (Number.isFinite(parsed) && parsed >= MIN_SIDEBAR) return parsed
+    const stored = Number(localStorage.getItem(PANEL_KEY))
+    if (Number.isFinite(stored) && stored >= MIN_PANEL && stored <= MAX_PANEL) return stored
   } catch {
-    // Private mode can block storage. Fall back to the default width.
+    // Storage can be blocked (private mode). Use the default width.
   }
-  return DEFAULT_SIDEBAR
+  return DEFAULT_PANEL
 }
 
-function clampSidebar(next: number, containerWidth: number): number {
-  const max = Math.max(MIN_SIDEBAR, containerWidth - MIN_EDITOR)
-  return Math.min(max, Math.max(MIN_SIDEBAR, next))
-}
-
+/**
+ * The final layout: header, connection banner, then the activity panel (left),
+ * a WAI-ARIA window splitter, and VS Code Web (right).
+ */
 export function Workspace() {
-  const { editorSrc } = useVoiceCoder()
-  const workspaceRef = useRef<HTMLDivElement>(null)
-  const resizingRef = useRef(false)
-  const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth)
-  const [resizing, setResizing] = useState(false)
+  const { status, muted, messages, events, editorSrc, stopTask } = useVoiceCoder()
+  const mainRef = useRef<HTMLElement>(null)
+  const draggingRef = useRef(false)
+  const [panel, setPanel] = useState(readPanelPercent)
 
+  // The panel width is a CSS custom property set on the element, not an inline style in JSX.
   useEffect(() => {
+    mainRef.current?.style.setProperty('--panel-width', `${panel}%`)
     try {
-      localStorage.setItem(SIDEBAR_KEY, String(Math.round(sidebarWidth)))
+      localStorage.setItem(PANEL_KEY, String(panel))
     } catch {
-      // Ignore storage failures and keep the width for this session.
+      // Keep the width for this session only.
     }
-  }, [sidebarWidth])
+  }, [panel])
 
-  function resizeTo(clientX: number) {
-    const bounds = workspaceRef.current?.getBoundingClientRect()
-    if (!bounds) return
-    setSidebarWidth(clampSidebar(bounds.right - clientX, bounds.width))
+  const activity = deriveActivity(messages, { muted })
+  const everConnected = events.some((e) => e.kind === 'status' && e.text === 'connected')
+  const connection: Connection =
+    status === 'connected' ? 'connected' : everConnected ? 'reconnecting' : 'connecting'
+  const lastRun = [...activity.entries].reverse().find((e) => e.kind === 'run')
+  const announcement =
+    activity.finishedRuns > 0 && lastRun?.kind === 'run' && lastRun.run.status !== 'working'
+      ? {
+          id: activity.finishedRuns,
+          text: lastRun.run.status === 'done' ? 'Agent finished' : 'Agent stopped',
+        }
+      : null
+
+  const resizeTo = (clientX: number) => {
+    const bounds = mainRef.current?.getBoundingClientRect()
+    if (!bounds || bounds.width === 0) return
+    setPanel(clampPanel(((clientX - bounds.left) / bounds.width) * 100))
   }
 
-  function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId) === false) {
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId)
-      } catch {
-        // Untrusted events cannot capture the pointer. Moves still update the width.
-      }
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // Synthetic events can't capture the pointer; moves still resize.
     }
-    resizingRef.current = true
-    setResizing(true)
+    draggingRef.current = true
     resizeTo(event.clientX)
   }
 
-  function onPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!resizingRef.current) return
-    resizeTo(event.clientX)
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (draggingRef.current) resizeTo(event.clientX)
   }
 
-  function stopResizing() {
-    resizingRef.current = false
-    setResizing(false)
+  const stopDragging = () => {
+    draggingRef.current = false
   }
 
-  function onKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
-    const step = event.shiftKey ? 48 : 16
-    const bounds = workspaceRef.current?.getBoundingClientRect()
-    const containerWidth = bounds?.width ?? sidebarWidth + MIN_EDITOR
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      setSidebarWidth((current) => clampSidebar(current + step, containerWidth))
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      setSidebarWidth((current) => clampSidebar(current - step, containerWidth))
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next: Record<string, number> = {
+      ArrowLeft: panel - STEP,
+      ArrowRight: panel + STEP,
+      Home: MIN_PANEL,
+      End: MAX_PANEL,
     }
+    const value = next[event.key]
+    if (value === undefined) return
+    event.preventDefault()
+    setPanel(clampPanel(value))
   }
 
   return (
-    <div
-      ref={workspaceRef}
-      className={resizing ? 'workspace is-resizing' : 'workspace'}
-      style={{ '--sidebar-width': `${sidebarWidth}px` } as CSSProperties}
-    >
-      <iframe
-        className="editor-frame"
-        title="VS Code"
-        src={editorSrc}
-        allow="clipboard-read; clipboard-write"
-      />
-      <button
-        type="button"
-        className="workspace-splitter"
-        aria-label="Resize editor and transcript"
-        aria-orientation="vertical"
-        aria-valuemin={MIN_SIDEBAR}
-        aria-valuenow={Math.round(sidebarWidth)}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={stopResizing}
-        onPointerCancel={stopResizing}
-        onKeyDown={onKeyDown}
-      />
-      <aside className="transcript-sidebar" aria-label="Voice transcript">
-        <h2>Transcript</h2>
-        <BridgeStatus />
-        <TalkControls />
-        <EventLog />
-        <TextPrompt />
-      </aside>
+    <div className="page">
+      <BridgeStatus phase={activity.phase} muted={muted} connection={connection} announcement={announcement} />
+      {connection === 'reconnecting' && <ConnectionAlert />}
+      <main ref={mainRef} className="workspace">
+        <div className="workspace__panel">
+          <EventLog entries={activity.entries} onStop={stopTask} />
+        </div>
+        {/* A focusable role="separator" is an interactive widget (WAI-ARIA window splitter),
+            which jsx-a11y doesn't model. */}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+        <div
+          className="workspace__splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize transcript panel"
+          aria-controls="activity-log"
+          aria-valuenow={panel}
+          aria-valuemin={MIN_PANEL}
+          aria-valuemax={MAX_PANEL}
+          aria-valuetext={`Transcript panel ${panel}% of the width`}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
+        >
+          <span className="workspace__grip" aria-hidden="true" />
+        </div>
+        <div className="workspace__editor">
+          <iframe
+            className="workspace__frame"
+            title="Code editor"
+            src={editorSrc}
+            allow="clipboard-read; clipboard-write"
+          />
+        </div>
+      </main>
     </div>
   )
 }

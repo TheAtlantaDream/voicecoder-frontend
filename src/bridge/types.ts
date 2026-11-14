@@ -33,6 +33,9 @@ export type ServerMessage =
   | AgentResultMessage
   | AgentPartialMessage
 
+/** A bridge message plus when it arrived (ms since epoch). */
+export type TimedMessage = { message: ServerMessage; at: number }
+
 export type ClientMessage =
   | { type: 'start' }
   | { type: 'end' }

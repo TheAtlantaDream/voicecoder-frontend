@@ -16,5 +16,6 @@ export {
   type PartialMessage,
   type ServerMessage,
   type StatusMessage,
+  type TimedMessage,
   type TranscriptMessage,
 } from './types.ts'

@@ -1,0 +1,12 @@
+.connection-alert {
+  padding: 12px 22px;
+  background: var(--sage);
+  color: var(--on-sage);
+  font: 16px/1.5 var(--font-ui);
+}
+
+@media (forced-colors: active) {
+  .connection-alert {
+    border-bottom: 2px solid CanvasText;
+  }
+}

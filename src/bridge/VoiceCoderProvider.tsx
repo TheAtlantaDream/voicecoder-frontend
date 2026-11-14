@@ -9,6 +9,7 @@ import {
   type LogEntry,
   type LogKind,
   type ServerMessage,
+  type TimedMessage,
 } from './types.ts'
 import { VoiceCoderContext, type VoiceCoderContextValue } from './useVoiceCoder.ts'
 
@@ -29,6 +30,7 @@ export function VoiceCoderProvider({
   const [listening, setListening] = useState(false)
   const [muted, setMutedState] = useState(false)
   const [events, setEvents] = useState<LogEntry[]>([])
+  const [messages, setMessages] = useState<TimedMessage[]>([])
   const [partial, setPartial] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<string | null>(null)
   const [cleaned, setCleaned] = useState<string | null>(null)
@@ -45,6 +47,8 @@ export function VoiceCoderProvider({
   const intentionalClose = useRef(false)
   const openingMic = useRef(false)
   const agentLogId = useRef<number | null>(null)
+  // Latest openSocket, so the reconnect timer can call it without referencing itself.
+  const reconnectRef = useRef<() => void>(() => {})
 
   const push = useCallback((text: string, kind: LogKind) => {
     const id = ++logId.current
@@ -68,6 +72,8 @@ export function VoiceCoderProvider({
 
   const applyMessage = useCallback(
     (message: ServerMessage) => {
+      const at = Date.now()
+      setMessages((current) => [...current, { message, at }])
       switch (message.type) {
         case 'partial':
           setPartial(message.text)
@@ -175,7 +181,7 @@ export function VoiceCoderProvider({
         push('disconnected, reconnecting…', 'status')
         window.setTimeout(() => {
           if (socketGen.current !== generation) return
-          openSocket()
+          reconnectRef.current()
         }, RECONNECT_MS)
       }
     }
@@ -201,6 +207,10 @@ export function VoiceCoderProvider({
       }
     }
   }, [applyMessage, ensureMic, push, stopMic, url])
+
+  useEffect(() => {
+    reconnectRef.current = openSocket
+  }, [openSocket])
 
   const disconnect = useCallback(() => {
     intentionalClose.current = true
@@ -242,8 +252,13 @@ export function VoiceCoderProvider({
     [send],
   )
 
+  const stopTask = useCallback(() => {
+    send({ type: 'stop' })
+  }, [send])
+
   const clearEvents = useCallback(() => {
     setEvents([])
+    setMessages([])
     agentLogId.current = null
   }, [])
 
@@ -268,6 +283,7 @@ export function VoiceCoderProvider({
       listening,
       muted,
       events,
+      messages,
       partial,
       transcript,
       cleaned,
@@ -278,6 +294,7 @@ export function VoiceCoderProvider({
       disconnect,
       setMuted,
       sendText,
+      stopTask,
       clearEvents,
     }),
     [
@@ -286,6 +303,7 @@ export function VoiceCoderProvider({
       listening,
       muted,
       events,
+      messages,
       partial,
       transcript,
       cleaned,
@@ -296,6 +314,7 @@ export function VoiceCoderProvider({
       disconnect,
       setMuted,
       sendText,
+      stopTask,
       clearEvents,
     ],
   )
