@@ -28,6 +28,8 @@ export function VoiceCoderProvider({
   const [partial, setPartial] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<string | null>(null)
   const [cleaned, setCleaned] = useState<string | null>(null)
+  const [agentSummary, setAgentSummary] = useState<string | null>(null)
+  const [agentDiff, setAgentDiff] = useState<string | null>(null)
 
   const socketRef = useRef<WebSocket | null>(null)
   const socketGen = useRef(0)
@@ -78,6 +80,12 @@ export function VoiceCoderProvider({
           break
         case 'error':
           push(`error: ${message.text}`, 'error')
+          break
+        case 'agent_result':
+          setAgentSummary(message.text)
+          setAgentDiff(message.diff || null)
+          push(`agent: ${message.text}`, 'agent_result')
+          if (message.diff) push(message.diff, 'agent_result')
           break
       }
     },
@@ -224,6 +232,8 @@ export function VoiceCoderProvider({
       partial,
       transcript,
       cleaned,
+      agentSummary,
+      agentDiff,
       connect,
       disconnect,
       startTalking,
@@ -239,6 +249,8 @@ export function VoiceCoderProvider({
       partial,
       transcript,
       cleaned,
+      agentSummary,
+      agentDiff,
       connect,
       disconnect,
       startTalking,

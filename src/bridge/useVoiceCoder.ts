@@ -9,6 +9,8 @@ export type VoiceCoderContextValue = {
   partial: string | null
   transcript: string | null
   cleaned: string | null
+  agentSummary: string | null
+  agentDiff: string | null
   connect: () => void
   disconnect: () => void
   startTalking: () => Promise<void>

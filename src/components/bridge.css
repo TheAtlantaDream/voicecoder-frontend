@@ -111,6 +111,11 @@
   font-weight: 700;
 }
 
+.bridge-log .agent_result {
+  color: #0b5fff;
+  white-space: pre-wrap;
+}
+
 .bridge-log .error {
   color: #c00;
 }
@@ -118,6 +123,10 @@
 @media (prefers-color-scheme: dark) {
   .bridge-log .cleaned {
     color: #4ade80;
+  }
+
+  .bridge-log .agent_result {
+    color: #93c5fd;
   }
 
   .bridge-log .error {
