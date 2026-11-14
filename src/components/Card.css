@@ -1,0 +1,39 @@
+/* Dark cards on the sage panel (CleanedMessage, AgentReply, QueuedRequest). */
+.card {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  /* Transparent border shows up as a real border in forced-colors mode. */
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  color: var(--text);
+}
+
+.card--sent {
+  background: var(--bg);
+}
+
+.card__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-1);
+  /* Sage text is allowed on #141414–#1e1e1e. */
+  color: var(--sage);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.card__body {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.card__note {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+}

@@ -1,0 +1,68 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  flex: 999 1 560px;
+  min-width: 0;
+  min-height: 0;
+  background: var(--editor);
+  color: var(--text);
+}
+
+.editor__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-deep);
+}
+
+.editor__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.editor__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editor__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--editor);
+}
+
+.editor__notice {
+  position: absolute;
+  inset: var(--space-4) var(--space-4) auto;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+}
+
+.editor__notice a {
+  color: var(--text);
+}
+
+.editor__placeholder {
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 980px) {
+  .editor {
+    min-height: 60vh;
+  }
+}

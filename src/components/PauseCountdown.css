@@ -1,0 +1,38 @@
+.pause-countdown {
+  color: var(--on-sage);
+}
+
+.pause-countdown__label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+}
+
+.pause-countdown__bar {
+  width: 100%;
+  height: 0.75rem;
+  margin-top: var(--space-1);
+  appearance: none;
+  border: 1px solid var(--on-sage);
+  border-radius: var(--radius);
+  background: var(--sage);
+  overflow: hidden;
+}
+
+.pause-countdown__bar::-webkit-progress-bar {
+  background: var(--sage);
+}
+
+.pause-countdown__bar::-webkit-progress-value {
+  background: var(--on-sage);
+}
+
+.pause-countdown__bar::-moz-progress-bar {
+  background: var(--on-sage);
+}
+
+@media (forced-colors: active) {
+  .pause-countdown__bar {
+    appearance: auto;
+  }
+}

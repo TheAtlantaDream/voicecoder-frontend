@@ -1,0 +1,50 @@
+.agent-reply__status {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.agent-reply--failed .agent-reply__status {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.agent-reply__body {
+  overflow-wrap: anywhere;
+}
+
+.agent-reply__body > :first-child {
+  margin-top: 0;
+}
+
+.agent-reply__body > :last-child {
+  margin-bottom: 0;
+}
+
+.agent-reply__body p {
+  margin: 0 0 var(--space-3);
+}
+
+.agent-reply__body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0 var(--space-1);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.agent-reply__body pre {
+  overflow-x: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--editor);
+}
+
+.agent-reply__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.agent-reply__body a {
+  color: var(--text);
+}

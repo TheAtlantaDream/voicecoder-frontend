@@ -1,0 +1,20 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-shell__main {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Wrapped (narrow or zoomed): let the page scroll instead of squeezing the panes. */
+@media (max-width: 980px) {
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+  }
+}

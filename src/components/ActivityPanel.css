@@ -1,0 +1,56 @@
+.activity {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 420px;
+  max-width: 560px;
+  min-height: 0;
+  padding: var(--space-4);
+  background: var(--sage);
+  color: var(--on-sage);
+  font-family: var(--font-activity);
+  font-size: var(--activity-size);
+}
+
+.activity__scroll {
+  flex: 1 1 auto;
+  min-height: 8rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  border-radius: var(--radius);
+}
+
+.activity__log {
+  padding: var(--space-1);
+}
+
+.activity__new {
+  align-self: center;
+  margin: var(--space-2) 0;
+}
+
+.activity__live:empty {
+  display: none;
+}
+
+.activity__live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--on-sage);
+}
+
+/* Panes have wrapped (420 + 560 px no longer fit): let the panel use the full width. */
+@media (max-width: 980px) {
+  .activity {
+    max-width: none;
+    min-height: 70vh;
+  }
+}
+
+@media (forced-colors: active) {
+  .activity {
+    border-right: 1px solid CanvasText;
+  }
+}

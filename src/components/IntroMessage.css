@@ -1,0 +1,8 @@
+/* Sits directly on the sage panel: dark text. */
+.intro {
+  color: var(--on-sage);
+}
+
+.intro p {
+  margin: 0 0 var(--space-3);
+}

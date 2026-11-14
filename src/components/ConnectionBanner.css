@@ -1,0 +1,17 @@
+.connection-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--text);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  color: var(--text);
+}
+
+.connection-banner__text {
+  flex: 1 1 16rem;
+  margin: 0;
+}
