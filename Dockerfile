@@ -1,11 +1,14 @@
+# syntax=docker/dockerfile:1
 FROM oven/bun:1 AS builder
 WORKDIR /app
 
 COPY package.json bun.lockb* bun.lock* ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 COPY . .
-RUN bun run build
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun run build
 
 FROM nginx:alpine AS production
 
@@ -24,4 +27,3 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 ENTRYPOINT ["sh", "/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
-
