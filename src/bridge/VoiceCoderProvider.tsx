@@ -49,6 +49,30 @@ export function VoiceCoderProvider({
   const agentLogId = useRef<number | null>(null)
   // Latest openSocket, so the reconnect timer can call it without referencing itself.
   const reconnectRef = useRef<() => void>(() => {})
+  const speechRef = useRef<HTMLAudioElement | null>(null)
+
+  const stopSpeech = useCallback(() => {
+    const audio = speechRef.current
+    speechRef.current = null
+    audio?.pause()
+  }, [])
+
+  // While the summary plays, mic audio is not sent, so the bridge does not
+  // hear the app's own voice.
+  const playSpeech = useCallback(
+    (base64: string) => {
+      stopSpeech()
+      const audio = new Audio(`data:audio/mpeg;base64,${base64}`)
+      const done = () => {
+        if (speechRef.current === audio) speechRef.current = null
+      }
+      audio.onended = done
+      audio.onerror = done
+      speechRef.current = audio
+      audio.play().catch(done)
+    },
+    [stopSpeech],
+  )
 
   const push = useCallback((text: string, kind: LogKind) => {
     const id = ++logId.current
@@ -73,7 +97,9 @@ export function VoiceCoderProvider({
   const applyMessage = useCallback(
     (message: ServerMessage) => {
       const at = Date.now()
-      setMessages((current) => [...current, { message, at }])
+      // The activity log doesn't need speech audio (base64 MP3), so don't keep it in memory.
+      const logged = message.type === 'speech' ? { ...message, audio: '' } : message
+      setMessages((current) => [...current, { message: logged, at }])
       switch (message.type) {
         case 'partial':
           setPartial(message.text)
@@ -117,9 +143,12 @@ export function VoiceCoderProvider({
             setEditorSrc(editorDiffSrc())
           }
           break
+        case 'speech':
+          playSpeech(message.audio)
+          break
       }
     },
-    [push],
+    [playSpeech, push],
   )
 
   const ensureMic = useCallback(async () => {
@@ -131,7 +160,7 @@ export function VoiceCoderProvider({
     const generation = ++micGen.current
     try {
       const session = await startMicrophone((pcm) => {
-        if (mutedRef.current) return
+        if (mutedRef.current || speechRef.current) return
         const current = socketRef.current
         if (current && current.readyState === WebSocket.OPEN) current.send(pcm)
       })
@@ -233,6 +262,7 @@ export function VoiceCoderProvider({
       mutedRef.current = next
       setMutedState(next)
       if (next) {
+        stopSpeech()
         send({ type: 'stop' })
         stopMic()
         push('muted', 'status')
@@ -241,7 +271,7 @@ export function VoiceCoderProvider({
         void ensureMic()
       }
     },
-    [ensureMic, push, send, stopMic],
+    [ensureMic, push, send, stopMic, stopSpeech],
   )
 
   const sendText = useCallback(
@@ -270,6 +300,8 @@ export function VoiceCoderProvider({
       micGen.current += 1
       micRef.current?.stop()
       micRef.current = null
+      speechRef.current?.pause()
+      speechRef.current = null
       const socket = socketRef.current
       socketRef.current = null
       socket?.close()

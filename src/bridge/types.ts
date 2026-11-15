@@ -23,6 +23,8 @@ export type StatusMessage = { type: 'status'; text: string }
 export type ErrorMessage = { type: 'error'; text: string }
 export type AgentResultMessage = { type: 'agent_result'; text: string; diff: string }
 export type AgentPartialMessage = { type: 'agent_partial'; text: string }
+// audio is base64 MP3 of the agent summary, from the bridge's ElevenLabs call.
+export type SpeechMessage = { type: 'speech'; text: string; audio: string }
 
 export type ServerMessage =
   | PartialMessage
@@ -32,6 +34,7 @@ export type ServerMessage =
   | ErrorMessage
   | AgentResultMessage
   | AgentPartialMessage
+  | SpeechMessage
 
 /** A bridge message plus when it arrived (ms since epoch). */
 export type TimedMessage = { message: ServerMessage; at: number }
@@ -44,7 +47,7 @@ export type ClientMessage =
 
 export function parseServerMessage(value: unknown): ServerMessage | null {
   if (!value || typeof value !== 'object') return null
-  const message = value as { type?: unknown; text?: unknown; seq?: unknown; diff?: unknown }
+  const message = value as { type?: unknown; text?: unknown; seq?: unknown; diff?: unknown; audio?: unknown }
   if (typeof message.type !== 'string') return null
   const text = typeof message.text === 'string' ? message.text : ''
 
@@ -71,6 +74,9 @@ export function parseServerMessage(value: unknown): ServerMessage | null {
         text,
         diff: typeof message.diff === 'string' ? message.diff : '',
       }
+    case 'speech':
+      if (typeof message.audio !== 'string' || !message.audio) return null
+      return { type: 'speech', text, audio: message.audio }
     default:
       return null
   }

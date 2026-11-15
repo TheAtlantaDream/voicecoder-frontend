@@ -154,6 +154,14 @@ describe('deriveActivity', () => {
     expect(kinds(entries)).toEqual(['intro'])
   })
 
+  it('ignores spoken-summary audio messages (they only play sound)', () => {
+    const { entries } = deriveActivity(
+      timed(...utterance, WORKING, { type: 'agent_result', text: 'Done.', diff: '' }, { type: 'speech', text: 'Done.', audio: '' }),
+      { muted: false },
+    )
+    expect(kinds(entries)).toEqual(['said', 'sent', 'run', 'ready'])
+  })
+
   it('keeps history: earlier requests stay above the current one', () => {
     const second: ServerMessage[] = [
       { type: 'partial', seq: 0, text: 'hey Coder rename it' },
