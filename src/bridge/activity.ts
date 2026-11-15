@@ -46,6 +46,9 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
   let liveKey = ''
   let processing = false
   let run: Run | null = null
+  // Separate from `run` so TS control flow (which misses endRun's `run = null`)
+  // still knows when a task is in progress after the message loop.
+  let working = false
   let finishedRuns = 0
 
   const endRun = (status: RunStatus, at: number) => {
@@ -53,6 +56,7 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
     run.status = status
     run.endedAt = at
     run = null
+    working = false
     finishedRuns++
   }
 
@@ -62,7 +66,7 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
       case 'partial':
         // While the agent is working, ignore live speech so the activity
         // panel does not flip back to "hearing you" mid-task.
-        if (run?.status === 'working') break
+        if (working) break
         if (!partials) {
           partials = new Map()
           liveKey = `live-${i}`
@@ -85,6 +89,7 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
         const status = classifyStatus(message.text)
         if (status.kind === 'working') {
           run = { status: 'working', startedAt: at, reply: '', progress: null, diffFiles: 0 }
+          working = true
           entries.push({ kind: 'run', key, run })
         } else if (status.kind === 'progress') {
           if (run) run.progress = message.text
@@ -160,20 +165,15 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
   // Runs are mutated in place above, so copy them out for React.
   const result: ActivityEntry[] = entries.map((e) => (e.kind === 'run' ? { ...e, run: { ...e.run } } : e))
 
-  // Prefer the working run over live partials so mid-task speech does not
-  // flip the panel back to "hearing you". (Avoid `run ? null : partials`
-  // ternaries — TS narrows `run` oddly after the forEach + endRun closure.)
-  let phase: Phase = run ? 'working' : 'idle'
-  if (run) {
-    // agent working: keep phase, do not append live partials
-  } else if (partials) {
+  let phase: Phase = working ? 'working' : 'idle'
+  if (!working && partials) {
     const text = [...partials.entries()]
       .sort(([a], [b]) => a - b)
       .map(([, t]) => t)
       .join(' ')
     result.push({ kind: 'live', key: liveKey, text })
     phase = 'hearing'
-  } else if (processing) {
+  } else if (!working && processing) {
     result.push({ kind: 'processing', key: 'processing' })
     phase = 'processing'
   }
