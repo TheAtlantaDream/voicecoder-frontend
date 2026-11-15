@@ -60,14 +60,21 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
     const key = String(i)
     switch (message.type) {
       case 'partial':
+<<<<<<< Updated upstream
         // While the agent is working, ignore live speech so the activity
         // panel does not flip back to "hearing you" mid-task.
         if (run?.status === 'working') break
+=======
+        // Always record into the map so tsc sees the Map assignment; we
+        // drop mid-task speech when building the live line below.
+>>>>>>> Stashed changes
         if (!partials) {
           partials = new Map()
           liveKey = `live-${i}`
         }
-        partials.set(message.seq, message.text)
+        if (run === null) {
+          partials.set(message.seq, message.text)
+        }
         break
 
       case 'transcript':
@@ -85,6 +92,10 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
         const status = classifyStatus(message.text)
         if (status.kind === 'working') {
           run = { status: 'working', startedAt: at, reply: '', progress: null, diffFiles: 0 }
+<<<<<<< Updated upstream
+=======
+          partials = null
+>>>>>>> Stashed changes
           entries.push({ kind: 'run', key, run })
         } else if (status.kind === 'progress') {
           if (run) run.progress = message.text
@@ -160,8 +171,18 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
   // Runs are mutated in place above, so copy them out for React.
   const result: ActivityEntry[] = entries.map((e) => (e.kind === 'run' ? { ...e, run: { ...e.run } } : e))
 
+<<<<<<< Updated upstream
   let phase: Phase = run ? 'working' : 'idle'
   const live = run?.status === 'working' ? null : (partials as Map<number, string> | null)
+=======
+  // After the loop, tsc often thinks `run` is still set (it misses endRun's
+  // `run = null`). Decide "working" from the copied entries instead.
+  const activeRun = result.find((e) => e.kind === 'run' && e.run.status === 'working')
+  let phase: Phase = activeRun ? 'working' : 'idle'
+  // Explicit type: tsc narrows the loop-local `partials` to `never` once a
+  // `run` has been assigned (it misses endRun clearing that binding).
+  const live: Map<number, string> | null = activeRun ? null : (partials as Map<number, string> | null)
+>>>>>>> Stashed changes
   if (live) {
     const text = [...live.entries()]
       .sort(([a], [b]) => a - b)
@@ -169,7 +190,11 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
       .join(' ')
     result.push({ kind: 'live', key: liveKey, text })
     phase = 'hearing'
+<<<<<<< Updated upstream
   } else if (processing) {
+=======
+  } else if (!activeRun && processing) {
+>>>>>>> Stashed changes
     result.push({ kind: 'processing', key: 'processing' })
     phase = 'processing'
   }
