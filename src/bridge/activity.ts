@@ -60,6 +60,9 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
     const key = String(i)
     switch (message.type) {
       case 'partial':
+        // While the agent is working, ignore live speech so the activity
+        // panel does not flip back to "hearing you" mid-task.
+        if (run?.status === 'working') break
         if (!partials) {
           partials = new Map()
           liveKey = `live-${i}`
@@ -158,7 +161,7 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
   const result: ActivityEntry[] = entries.map((e) => (e.kind === 'run' ? { ...e, run: { ...e.run } } : e))
 
   let phase: Phase = run ? 'working' : 'idle'
-  const live = partials as Map<number, string> | null
+  const live = run?.status === 'working' ? null : (partials as Map<number, string> | null)
   if (live) {
     const text = [...live.entries()]
       .sort(([a], [b]) => a - b)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { startMicrophone, type MicSession } from './audio.ts'
+import { classifyStatus } from './classify.ts'
 import { editorDiffSrc, editorFolderSrc } from './editorUrl.ts'
 import { DEFAULT_BRIDGE_URL } from './env.ts'
 import {
@@ -47,6 +48,8 @@ export function VoiceCoderProvider({
   const intentionalClose = useRef(false)
   const openingMic = useRef(false)
   const agentLogId = useRef<number | null>(null)
+  // True from "Working on it." until agent_result / stop / failure — hides speech partials.
+  const agentBusyRef = useRef(false)
   // Latest openSocket, so the reconnect timer can call it without referencing itself.
   const reconnectRef = useRef<() => void>(() => {})
   const speechRef = useRef<HTMLAudioElement | null>(null)
@@ -97,6 +100,18 @@ export function VoiceCoderProvider({
   const applyMessage = useCallback(
     (message: ServerMessage) => {
       const at = Date.now()
+      if (message.type === 'status') {
+        const kind = classifyStatus(message.text).kind
+        if (kind === 'working') agentBusyRef.current = true
+        if (kind === 'stoppedWithChanges' || kind === 'stoppedNothing') agentBusyRef.current = false
+      }
+      if (message.type === 'agent_result' || message.type === 'error') {
+        agentBusyRef.current = false
+      }
+      // Drop speech partials (and their log lines) while the agent is working.
+      if (message.type === 'partial' && agentBusyRef.current) {
+        return
+      }
       // The activity log doesn't need speech audio (base64 MP3), so don't keep it in memory.
       const logged = message.type === 'speech' ? { ...message, audio: '' } : message
       setMessages((current) => [...current, { message: logged, at }])

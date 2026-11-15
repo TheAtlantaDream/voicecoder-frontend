@@ -162,6 +162,20 @@ describe('deriveActivity', () => {
     expect(kinds(entries)).toEqual(['said', 'sent', 'run', 'ready'])
   })
 
+  it('ignores speech partials while the agent is working', () => {
+    const { entries, phase } = deriveActivity(
+      timed(
+        ...utterance,
+        WORKING,
+        { type: 'partial', seq: 0, text: 'hey Coder do something else' },
+        { type: 'partial', seq: 1, text: 'while busy' },
+      ),
+      { muted: false },
+    )
+    expect(kinds(entries)).toEqual(['said', 'sent', 'run'])
+    expect(phase).toBe('working')
+  })
+
   it('keeps history: earlier requests stay above the current one', () => {
     const second: ServerMessage[] = [
       { type: 'partial', seq: 0, text: 'hey Coder rename it' },
