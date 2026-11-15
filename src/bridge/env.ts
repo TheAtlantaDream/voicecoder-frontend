@@ -54,3 +54,6 @@ function readSampleRate(): number {
 export const TARGET_SAMPLE_RATE = readSampleRate()
 
 export const VSCODE_WEB_URL = readSetting('VSCODE_WEB_URL') ?? FALLBACK_VSCODE_WEB_URL
+
+/** Where nginx proxies the site the agent is serving. */
+export const PREVIEW_URL = '/preview/'

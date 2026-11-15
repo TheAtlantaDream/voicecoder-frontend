@@ -205,6 +205,15 @@ describe('speech queue and cutting in (provider)', () => {
     expect(FakeAudio.all).toHaveLength(1)
   })
 
+  it('preview open and close from the bridge set and clear the preview address', async () => {
+    await connect()
+    expect(latest.ctx!.previewSrc).toBeNull()
+    await act(async () => FakeSocket.last!.receive({ type: 'preview', text: 'open' }))
+    expect(latest.ctx!.previewSrc).toMatch(/^\/preview\/\?t=\d+$/)
+    await act(async () => FakeSocket.last!.receive({ type: 'preview', text: 'close' }))
+    expect(latest.ctx!.previewSrc).toBeNull()
+  })
+
   const space = (target: EventTarget = document.body) => {
     const event = new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true })
     act(() => {

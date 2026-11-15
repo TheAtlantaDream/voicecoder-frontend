@@ -23,6 +23,8 @@ function makeValue(overrides: Partial<VoiceCoderContextValue> = {}): VoiceCoderC
     agentSummary: null,
     agentDiff: null,
     editorSrc: '/vscode/?folder=/home/workspace/project',
+    previewSrc: null,
+    closePreview: vi.fn(),
     connect: vi.fn(),
     disconnect: vi.fn(),
     setMuted: vi.fn(),
@@ -67,6 +69,22 @@ describe('Workspace layout', () => {
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(screen.getAllByRole('log')).toHaveLength(1)
     expect(editor).toHaveAttribute('src', '/vscode/?folder=/home/workspace/project')
+  })
+
+  it('shows the agent\'s site over the editor, and goes back on request', async () => {
+    const { value } = renderWith({ previewSrc: '/preview/?t=1' })
+    const preview = screen.getByTitle('Preview of your site')
+    expect(preview).toHaveAttribute('src', '/preview/?t=1')
+    expect(preview.getAttribute('sandbox')).not.toContain('allow-same-origin')
+    expect(screen.getByTitle('Code editor')).not.toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Back to code editor' }))
+    expect(value.closePreview).toHaveBeenCalled()
+  })
+
+  it('shows no preview until the agent opens one', () => {
+    renderWith()
+    expect(screen.queryByTitle('Preview of your site')).not.toBeInTheDocument()
+    expect(screen.getByTitle('Code editor')).toBeVisible()
   })
 
   it('no longer renders the old Connect/Start/End buttons', () => {

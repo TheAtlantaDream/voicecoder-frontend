@@ -30,7 +30,8 @@ function readPanelPercent(): number {
  * a WAI-ARIA window splitter, and VS Code Web (right).
  */
 export function Workspace() {
-  const { status, muted, messages, events, editorSrc, stopTask, speaking, stopSpeaking } = useVoiceCoder()
+  const { status, muted, messages, events, editorSrc, previewSrc, closePreview, stopTask, speaking, stopSpeaking } =
+    useVoiceCoder()
   const mainRef = useRef<HTMLElement>(null)
   const draggingRef = useRef(false)
   const [panel, setPanel] = useState(readPanelPercent)
@@ -147,11 +148,30 @@ export function Workspace() {
           <span className="workspace__grip" aria-hidden="true" />
         </div>
         <div className="workspace__editor">
+          {previewSrc && (
+            <section className="workspace__preview" aria-label="Preview of your site">
+              <div className="workspace__preview-bar">
+                <h2 className="workspace__preview-heading">Preview of your site</h2>
+                <button type="button" className="button" onClick={closePreview}>
+                  Back to code editor
+                </button>
+              </div>
+              {/* No allow-same-origin: the site must not reach into VoiceCoder itself. */}
+              <iframe
+                className="workspace__frame"
+                title="Preview of your site"
+                src={previewSrc}
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+              />
+            </section>
+          )}
+          {/* Kept mounted while hidden, so VS Code does not reload. */}
           <iframe
             className="workspace__frame"
             title="Code editor"
             src={editorSrc}
             allow="clipboard-read; clipboard-write"
+            hidden={previewSrc !== null}
           />
         </div>
       </main>

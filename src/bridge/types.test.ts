@@ -24,4 +24,10 @@ describe('parseServerMessage speech', () => {
   it('parses interrupt', () => {
     expect(parseServerMessage({ type: 'interrupt' })).toEqual({ type: 'interrupt' })
   })
+
+  it('parses preview open and close, and drops anything else', () => {
+    expect(parseServerMessage({ type: 'preview', text: 'open' })).toEqual({ type: 'preview', action: 'open' })
+    expect(parseServerMessage({ type: 'preview', text: 'close' })).toEqual({ type: 'preview', action: 'close' })
+    expect(parseServerMessage({ type: 'preview', text: 'http://evil.example' })).toBeNull()
+  })
 })

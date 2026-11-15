@@ -31,6 +31,9 @@ export type SpeechMessage = { type: 'speech'; text: string; audio: string; kind:
 // Stop playing speech now: the user cut in by voice.
 export type InterruptMessage = { type: 'interrupt' }
 
+// Show or hide the site the agent is serving.
+export type PreviewMessage = { type: 'preview'; action: 'open' | 'close' }
+
 export type ServerMessage =
   | PartialMessage
   | TranscriptMessage
@@ -41,6 +44,7 @@ export type ServerMessage =
   | AgentPartialMessage
   | SpeechMessage
   | InterruptMessage
+  | PreviewMessage
 
 /** A bridge message plus when it arrived (ms since epoch). */
 export type TimedMessage = { message: ServerMessage; at: number }
@@ -92,6 +96,9 @@ export function parseServerMessage(value: unknown): ServerMessage | null {
       }
     case 'interrupt':
       return { type: 'interrupt' }
+    case 'preview':
+      if (text !== 'open' && text !== 'close') return null
+      return { type: 'preview', action: text }
     default:
       return null
   }

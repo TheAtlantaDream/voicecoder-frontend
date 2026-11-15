@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { startMicrophone, type MicSession } from './audio.ts'
 import { classifyStatus } from './classify.ts'
 import { editorDiffSrc, editorFolderSrc } from './editorUrl.ts'
-import { DEFAULT_BRIDGE_URL } from './env.ts'
+import { DEFAULT_BRIDGE_URL, PREVIEW_URL } from './env.ts'
 import {
   parseServerMessage,
   type ClientMessage,
@@ -61,6 +61,8 @@ export function VoiceCoderProvider({
   const [agentSummary, setAgentSummary] = useState<string | null>(null)
   const [agentDiff, setAgentDiff] = useState<string | null>(null)
   const [editorSrc, setEditorSrc] = useState(editorFolderSrc)
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
+  const closePreview = useCallback(() => setPreviewSrc(null), [])
   const [readAloud, setReadAloudState] = useState(readReadAloudPref)
   const [speaking, setSpeaking] = useState(false)
 
@@ -181,6 +183,11 @@ export function VoiceCoderProvider({
       }
       if (message.type === 'interrupt') {
         stopSpeech()
+        return
+      }
+      if (message.type === 'preview') {
+        // A new address each time, so opening again reloads the site.
+        setPreviewSrc(message.action === 'open' ? `${PREVIEW_URL}?t=${at}` : null)
         return
       }
       // The activity log doesn't need speech audio (base64 MP3), so don't keep it in memory.
@@ -445,6 +452,8 @@ export function VoiceCoderProvider({
       agentSummary,
       agentDiff,
       editorSrc,
+      previewSrc,
+      closePreview,
       connect,
       disconnect,
       setMuted,
@@ -469,6 +478,8 @@ export function VoiceCoderProvider({
       agentSummary,
       agentDiff,
       editorSrc,
+      previewSrc,
+      closePreview,
       connect,
       disconnect,
       setMuted,

@@ -62,6 +62,39 @@
   background: var(--ink);
 }
 
+.workspace__frame[hidden] {
+  display: none;
+}
+
+.workspace__preview {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace__preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.workspace__preview-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.workspace__preview .workspace__frame {
+  background: #fff;
+}
+
 /* Narrow screens and 200% zoom: stack the editor under the panel, page scrolls. */
 @media (max-width: 900px) {
   .page {
