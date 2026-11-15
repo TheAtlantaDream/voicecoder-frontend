@@ -160,10 +160,14 @@ export function deriveActivity(messages: TimedMessage[], options: { muted: boole
   // Runs are mutated in place above, so copy them out for React.
   const result: ActivityEntry[] = entries.map((e) => (e.kind === 'run' ? { ...e, run: { ...e.run } } : e))
 
+  // Prefer the working run over live partials so mid-task speech does not
+  // flip the panel back to "hearing you". (Avoid `run ? null : partials`
+  // ternaries — TS narrows `run` oddly after the forEach + endRun closure.)
   let phase: Phase = run ? 'working' : 'idle'
-  const live = run?.status === 'working' ? null : (partials as Map<number, string> | null)
-  if (live) {
-    const text = [...live.entries()]
+  if (run) {
+    // agent working: keep phase, do not append live partials
+  } else if (partials) {
+    const text = [...partials.entries()]
       .sort(([a], [b]) => a - b)
       .map(([, t]) => t)
       .join(' ')
