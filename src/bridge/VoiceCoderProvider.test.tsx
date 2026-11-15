@@ -67,6 +67,8 @@ function Probe() {
   return null
 }
 
+const controlsSent = () =>
+  FakeSocket.last!.sent.filter((d) => typeof d === 'string').map((d) => (JSON.parse(d as string) as { type: string }).type)
 const audioFramesSent = () => FakeSocket.last!.sent.filter((d) => d instanceof ArrayBuffer).length
 
 async function connect() {
@@ -100,7 +102,7 @@ describe('read aloud (provider)', () => {
     expect(latest.ctx!.readAloud).toBe(true)
   })
 
-  it('pauses mic frames while the summary plays and resumes when it ends', async () => {
+  it('keeps the mic on while the summary plays, and tells the bridge', async () => {
     await connect()
     act(() => onFrame!(new ArrayBuffer(8)))
     expect(audioFramesSent()).toBe(1)
@@ -109,13 +111,23 @@ describe('read aloud (provider)', () => {
     expect(FakeAudio.all).toHaveLength(1)
     expect(FakeAudio.all[0]!.src).toBe('data:audio/mpeg;base64,AAAA')
     expect(latest.ctx!.speaking).toBe(true)
+    expect(controlsSent()).toContain('speech_start')
     act(() => onFrame!(new ArrayBuffer(8)))
-    expect(audioFramesSent()).toBe(1)
+    expect(audioFramesSent()).toBe(2)
 
     act(() => FakeAudio.all[0]!.onended!())
     expect(latest.ctx!.speaking).toBe(false)
+    expect(controlsSent().at(-1)).toBe('speech_end')
+  })
+
+  it('does not send the mic while the welcome plays', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive({ ...SPEECH, kind: 'intro' }))
     act(() => onFrame!(new ArrayBuffer(8)))
-    expect(audioFramesSent()).toBe(2)
+    expect(audioFramesSent()).toBe(0)
+    act(() => FakeAudio.all[0]!.onended!())
+    act(() => onFrame!(new ArrayBuffer(8)))
+    expect(audioFramesSent()).toBe(1)
   })
 
   it('Stop reading ends playback at once and resumes the mic', async () => {
@@ -157,5 +169,88 @@ describe('read aloud (provider)', () => {
     expect(latest.ctx!.readAloud).toBe(true)
     expect(() => act(() => latest.ctx!.setReadAloud(false))).not.toThrow()
     expect(latest.ctx!.readAloud).toBe(false)
+  })
+})
+
+describe('speech queue and cutting in (provider)', () => {
+  const clip = (kind: string, audio: string) => ({ type: 'speech', text: 'x', audio, kind })
+  const srcs = () => FakeAudio.all.map((a) => a.src.split(',')[1])
+
+  it('plays the welcome, then the summary, in order', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive(clip('intro', 'INTRO')))
+    await act(async () => FakeSocket.last!.receive(clip('summary', 'SUM')))
+    expect(srcs()).toEqual(['INTRO'])
+    act(() => FakeAudio.all[0]!.onended!())
+    expect(srcs()).toEqual(['INTRO', 'SUM'])
+    expect(latest.ctx!.speaking).toBe(true)
+  })
+
+  it('drops narration that would have to wait', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive(clip('narration', 'N1')))
+    await act(async () => FakeSocket.last!.receive(clip('narration', 'N2')))
+    await act(async () => FakeSocket.last!.receive(clip('summary', 'SUM')))
+    act(() => FakeAudio.all[0]!.onended!())
+    expect(srcs()).toEqual(['N1', 'SUM'])
+  })
+
+  it('interrupt from the bridge stops speech and clears the queue', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive(clip('intro', 'INTRO')))
+    await act(async () => FakeSocket.last!.receive(clip('summary', 'SUM')))
+    await act(async () => FakeSocket.last!.receive({ type: 'interrupt' }))
+    expect(FakeAudio.all[0]!.paused).toBe(true)
+    expect(latest.ctx!.speaking).toBe(false)
+    expect(FakeAudio.all).toHaveLength(1)
+  })
+
+  const space = (target: EventTarget = document.body) => {
+    const event = new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true })
+    act(() => {
+      target.dispatchEvent(event)
+    })
+    return event
+  }
+  const stops = () => controlsSent().filter((t) => t === 'stop').length
+
+  it('space does nothing when idle', async () => {
+    await connect()
+    expect(space().defaultPrevented).toBe(false)
+    expect(stops()).toBe(0)
+  })
+
+  it('space stops speech without stopping an idle agent', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive(SPEECH))
+    expect(space().defaultPrevented).toBe(true)
+    expect(FakeAudio.all[0]!.paused).toBe(true)
+    expect(stops()).toBe(0)
+  })
+
+  it('space stops a working agent and its narration', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive({ type: 'status', text: 'Working on it.' }))
+    await act(async () => FakeSocket.last!.receive(clip('narration', 'N1')))
+    expect(space().defaultPrevented).toBe(true)
+    expect(FakeAudio.all[0]!.paused).toBe(true)
+    expect(stops()).toBe(1)
+  })
+
+  it('space is left alone in a text box or on a button, and with modifiers', async () => {
+    await connect()
+    await act(async () => FakeSocket.last!.receive({ type: 'status', text: 'Working on it.' }))
+    for (const tag of ['input', 'textarea', 'button']) {
+      const el = document.createElement(tag)
+      document.body.appendChild(el)
+      expect(space(el).defaultPrevented).toBe(false)
+      el.remove()
+    }
+    const held = new KeyboardEvent('keydown', { code: 'Space', ctrlKey: true, bubbles: true, cancelable: true })
+    act(() => {
+      document.body.dispatchEvent(held)
+    })
+    expect(held.defaultPrevented).toBe(false)
+    expect(stops()).toBe(0)
   })
 })
