@@ -156,7 +156,7 @@ describe('deriveActivity', () => {
 
   it('ignores spoken-summary audio messages (they only play sound)', () => {
     const { entries } = deriveActivity(
-      timed(...utterance, WORKING, { type: 'agent_result', text: 'Done.', diff: '' }, { type: 'speech', text: 'Done.', audio: '' }),
+      timed(...utterance, WORKING, { type: 'agent_result', text: 'Done.', diff: '' }, { type: 'speech', text: 'Done.', audio: '', kind: 'summary' }),
       { muted: false },
     )
     expect(kinds(entries)).toEqual(['said', 'sent', 'run', 'ready'])

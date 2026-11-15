@@ -24,7 +24,15 @@ export type ErrorMessage = { type: 'error'; text: string }
 export type AgentResultMessage = { type: 'agent_result'; text: string; diff: string }
 export type AgentPartialMessage = { type: 'agent_partial'; text: string }
 // audio is base64 MP3 of the agent summary, from the bridge's ElevenLabs call.
-export type SpeechMessage = { type: 'speech'; text: string; audio: string }
+// kind: 'intro' is the one-time welcome, 'narration' is said while the agent
+// works, 'reply' answers the user mid-run, and 'summary' closes a request.
+export type SpeechKind = 'intro' | 'summary' | 'narration' | 'reply'
+export type SpeechMessage = { type: 'speech'; text: string; audio: string; kind: SpeechKind }
+// Stop playing speech now: the user cut in by voice.
+export type InterruptMessage = { type: 'interrupt' }
+
+// Show or hide the site the agent is serving.
+export type PreviewMessage = { type: 'preview'; action: 'open' | 'close' }
 
 export type ServerMessage =
   | PartialMessage
@@ -35,6 +43,8 @@ export type ServerMessage =
   | AgentResultMessage
   | AgentPartialMessage
   | SpeechMessage
+  | InterruptMessage
+  | PreviewMessage
 
 /** A bridge message plus when it arrived (ms since epoch). */
 export type TimedMessage = { message: ServerMessage; at: number }
@@ -44,6 +54,8 @@ export type ClientMessage =
   | { type: 'end' }
   | { type: 'stop' }
   | { type: 'text'; text: string }
+  | { type: 'speech_start' }
+  | { type: 'speech_end' }
 
 export function parseServerMessage(value: unknown): ServerMessage | null {
   if (!value || typeof value !== 'object') return null
@@ -76,8 +88,22 @@ export function parseServerMessage(value: unknown): ServerMessage | null {
       }
     case 'speech':
       if (typeof message.audio !== 'string' || !message.audio) return null
-      return { type: 'speech', text, audio: message.audio }
+      return {
+        type: 'speech',
+        text,
+        audio: message.audio,
+        kind: speechKind((message as { kind?: unknown }).kind),
+      }
+    case 'interrupt':
+      return { type: 'interrupt' }
+    case 'preview':
+      if (text !== 'open' && text !== 'close') return null
+      return { type: 'preview', action: text }
     default:
       return null
   }
+}
+
+function speechKind(kind: unknown): SpeechKind {
+  return kind === 'intro' || kind === 'narration' || kind === 'reply' ? kind : 'summary'
 }

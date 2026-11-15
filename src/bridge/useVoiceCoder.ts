@@ -15,6 +15,9 @@ export type VoiceCoderContextValue = {
   agentSummary: string | null
   agentDiff: string | null
   editorSrc: string
+  /** Address of the agent's site while the preview panel is open, else null. */
+  previewSrc: string | null
+  closePreview: () => void
   connect: () => void
   disconnect: () => void
   setMuted: (muted: boolean) => void

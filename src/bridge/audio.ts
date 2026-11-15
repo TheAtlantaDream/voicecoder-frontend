@@ -24,7 +24,11 @@ function pcmBuffer(input: Float32Array, sampleRate: number): ArrayBuffer {
 }
 
 export async function startMicrophone(onFrame: (pcm: ArrayBuffer) => void): Promise<MicSession> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const stream = await navigator.mediaDevices.getUserMedia({
+    // Echo cancellation keeps the app's own voice out of the mic, which matters
+    // now that the mic stays on while a summary is read aloud.
+    audio: { echoCancellation: true, noiseSuppression: true },
+  })
   const audioCtx = new AudioContext()
   await audioCtx.resume()
   const source = audioCtx.createMediaStreamSource(stream)

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { startMicrophone, type MicSession } from './audio.ts'
 import { classifyStatus } from './classify.ts'
 import { editorDiffSrc, editorFolderSrc } from './editorUrl.ts'
-import { DEFAULT_BRIDGE_URL } from './env.ts'
+import { DEFAULT_BRIDGE_URL, PREVIEW_URL } from './env.ts'
 import {
   parseServerMessage,
   type ClientMessage,
@@ -10,6 +10,7 @@ import {
   type LogEntry,
   type LogKind,
   type ServerMessage,
+  type SpeechKind,
   type TimedMessage,
 } from './types.ts'
 import { VoiceCoderContext, type VoiceCoderContextValue } from './useVoiceCoder.ts'
@@ -20,6 +21,16 @@ type VoiceCoderProviderProps = {
 }
 
 const RECONNECT_MS = 1500
+
+type SpeechClip = { audio: string; kind: SpeechKind }
+
+// Space keeps its normal job while typing, and on a focused button or link
+// (keyboard and screen reader users press Space to activate those).
+function spaceBelongsTo(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return target.closest('input, textarea, select, button, a[href], summary, [role="button"], [role="switch"], [role="checkbox"], [role="textbox"]') !== null
+}
 
 /** localStorage key for the Read aloud toggle. */
 export const READ_ALOUD_KEY = 'voicecoder.readAloud'
@@ -50,6 +61,8 @@ export function VoiceCoderProvider({
   const [agentSummary, setAgentSummary] = useState<string | null>(null)
   const [agentDiff, setAgentDiff] = useState<string | null>(null)
   const [editorSrc, setEditorSrc] = useState(editorFolderSrc)
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
+  const closePreview = useCallback(() => setPreviewSrc(null), [])
   const [readAloud, setReadAloudState] = useState(readReadAloudPref)
   const [speaking, setSpeaking] = useState(false)
 
@@ -69,37 +82,68 @@ export function VoiceCoderProvider({
   const speechRef = useRef<HTMLAudioElement | null>(null)
   const readAloudRef = useRef(readAloud)
 
-  const stopSpeech = useCallback(() => {
-    const audio = speechRef.current
-    speechRef.current = null
-    audio?.pause()
-    setSpeaking(false)
+  // Clips still waiting behind the one that is playing.
+  const speechQueueRef = useRef<SpeechClip[]>([])
+  // True while the welcome plays. It says "hey Coder" and "over" itself, so
+  // mic audio is not sent during it. During every other clip the mic stays
+  // on, so the user can cut in by voice; the bridge is told when a summary
+  // plays so it ignores anything but "hey Coder" and "stop".
+  const introPlayingRef = useRef(false)
+
+  const tellBridge = useCallback((type: 'speech_start' | 'speech_end') => {
+    const socket = socketRef.current
+    if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }))
   }, [])
 
-  // While the summary plays, mic audio is not sent, so the bridge does not
-  // hear the app's own voice.
+  const stopSpeech = useCallback(() => {
+    speechQueueRef.current = []
+    const audio = speechRef.current
+    if (!audio) return
+    speechRef.current = null
+    introPlayingRef.current = false
+    audio.pause()
+    setSpeaking(false)
+    tellBridge('speech_end')
+  }, [tellBridge])
+
+  // Clips play one after another (the welcome, then the summary).
   const playSpeech = useCallback(
-    (base64: string) => {
-      stopSpeech()
-      // Read aloud off: the summary is still shown, just not spoken.
+    (first: SpeechClip) => {
+      // Read aloud off: the text is still shown, just not spoken.
       if (!readAloudRef.current) return
-      const audio = new Audio(`data:audio/mpeg;base64,${base64}`)
-      const done = () => {
-        if (speechRef.current !== audio) return
-        speechRef.current = null
-        setSpeaking(false)
+      const start = (clip: SpeechClip) => {
+        const audio = new Audio(`data:audio/mpeg;base64,${clip.audio}`)
+        const done = () => {
+          if (speechRef.current !== audio) return
+          const next = speechQueueRef.current.shift()
+          if (next !== undefined) return start(next)
+          speechRef.current = null
+          introPlayingRef.current = false
+          setSpeaking(false)
+          tellBridge('speech_end')
+        }
+        audio.onended = done
+        audio.onerror = done
+        speechRef.current = audio
+        introPlayingRef.current = clip.kind === 'intro'
+        setSpeaking(true)
+        tellBridge(clip.kind === 'summary' ? 'speech_start' : 'speech_end')
+        audio.play().catch((error: unknown) => {
+          // Never block the flow if playback fails (e.g. autoplay policy).
+          console.warn('[voicecoder] could not play speech', error)
+          done()
+        })
       }
-      audio.onended = done
-      audio.onerror = done
-      speechRef.current = audio
-      setSpeaking(true)
-      audio.play().catch((error: unknown) => {
-        // Never block the flow if playback fails (e.g. autoplay policy).
-        console.warn('[voicecoder] could not play the spoken summary', error)
-        done()
-      })
+      if (!speechRef.current) return start(first)
+      // Narration is only worth hearing live: never let it pile up or delay
+      // an answer or the summary.
+      if (first.kind === 'narration') return
+      if (first.kind !== 'intro') {
+        speechQueueRef.current = speechQueueRef.current.filter((clip) => clip.kind !== 'narration')
+      }
+      speechQueueRef.current.push(first)
     },
-    [stopSpeech],
+    [tellBridge],
   )
 
   const push = useCallback((text: string, kind: LogKind) => {
@@ -135,6 +179,15 @@ export function VoiceCoderProvider({
       }
       // Drop speech partials (and their log lines) while the agent is working.
       if (message.type === 'partial' && agentBusyRef.current) {
+        return
+      }
+      if (message.type === 'interrupt') {
+        stopSpeech()
+        return
+      }
+      if (message.type === 'preview') {
+        // A new address each time, so opening again reloads the site.
+        setPreviewSrc(message.action === 'open' ? `${PREVIEW_URL}?t=${at}` : null)
         return
       }
       // The activity log doesn't need speech audio (base64 MP3), so don't keep it in memory.
@@ -184,11 +237,11 @@ export function VoiceCoderProvider({
           }
           break
         case 'speech':
-          playSpeech(message.audio)
+          playSpeech({ audio: message.audio, kind: message.kind })
           break
       }
     },
-    [playSpeech, push],
+    [playSpeech, push, stopSpeech],
   )
 
   const ensureMic = useCallback(async () => {
@@ -200,7 +253,7 @@ export function VoiceCoderProvider({
     const generation = ++micGen.current
     try {
       const session = await startMicrophone((pcm) => {
-        if (mutedRef.current || speechRef.current) return
+        if (mutedRef.current || introPlayingRef.current) return
         const current = socketRef.current
         if (current && current.readyState === WebSocket.OPEN) current.send(pcm)
       })
@@ -340,6 +393,27 @@ export function VoiceCoderProvider({
     send({ type: 'stop' })
   }, [send])
 
+  // Space cancels whatever is happening: the agent working, speech playing,
+  // or both. It does nothing when idle, and is left alone while typing.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat) return
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+      if (spaceBelongsTo(event.target)) return
+      const working = agentBusyRef.current
+      if (!speechRef.current && !working) return
+      event.preventDefault()
+      stopSpeech()
+      if (working) {
+        send({ type: 'stop' })
+        // Stop also ends listening on the bridge; keep the mic armed.
+        if (micRef.current && !mutedRef.current) send({ type: 'start' })
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [send, stopSpeech])
+
   const clearEvents = useCallback(() => {
     setEvents([])
     setMessages([])
@@ -354,6 +428,8 @@ export function VoiceCoderProvider({
       micGen.current += 1
       micRef.current?.stop()
       micRef.current = null
+      speechQueueRef.current = []
+      introPlayingRef.current = false
       speechRef.current?.pause()
       speechRef.current = null
       const socket = socketRef.current
@@ -376,6 +452,8 @@ export function VoiceCoderProvider({
       agentSummary,
       agentDiff,
       editorSrc,
+      previewSrc,
+      closePreview,
       connect,
       disconnect,
       setMuted,
@@ -400,6 +478,8 @@ export function VoiceCoderProvider({
       agentSummary,
       agentDiff,
       editorSrc,
+      previewSrc,
+      closePreview,
       connect,
       disconnect,
       setMuted,
