@@ -1,6 +1,4 @@
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
 }
 
@@ -14,15 +12,13 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-ui);
-  line-height: 1.5;
+  font-family: var(--font-sans);
+  font-size: 16px;
 }
 
-/* One focus style everywhere: accent outline with a dark halo so it reads on sage too. */
 :focus-visible {
-  outline: var(--focus-width) solid var(--accent);
+  outline: 3px solid var(--text);
   outline-offset: 3px;
-  box-shadow: 0 0 0 calc(var(--focus-width) * 2 + 3px) var(--on-sage);
 }
 
 .visually-hidden {
@@ -37,22 +33,66 @@ body {
   border: 0;
 }
 
-/* Shared button look for secondary controls (not the mic). */
-.button {
-  min-height: var(--target-min);
-  min-width: var(--target-min);
-  padding: var(--space-2) var(--space-4);
-  border: 2px solid var(--text);
-  border-radius: var(--radius);
-  background: var(--bg-deep);
+/* ---------- reusable pieces (UPDATES_v2.md §2) ---------- */
+
+/* Silkscreen section tag: ACTIVITY, YOU · LIVE, SENT TO AGENT, AGENT */
+.tag {
+  align-self: flex-start;
+  padding: 3px 8px;
   color: var(--text);
-  font: 600 1rem var(--font-ui);
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+/* Small uppercase meta text: status, timers, connection */
+.meta {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pill {
+  border-radius: var(--radius-pill);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid transparent; /* shows as a border in forced colors */
+  border-radius: var(--radius-card);
+  background: var(--white);
+}
+
+/* Big black pill button: Stop task, Stop reading */
+.btn-ink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 500 16px var(--font-sans);
   cursor: pointer;
 }
 
-.button:hover {
-  background: var(--bg);
+.btn-ink:hover {
   text-decoration: underline;
+}
+
+.btn-ink__square {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  background: currentColor;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -68,6 +108,14 @@ body {
 @media (forced-colors: active) {
   :focus-visible {
     outline-color: Highlight;
-    box-shadow: none;
+  }
+
+  .btn-ink {
+    border: 2px solid ButtonText;
+  }
+
+  .btn-ink__square {
+    forced-color-adjust: none;
+    background: ButtonText;
   }
 }

@@ -21,6 +21,13 @@ export type VoiceCoderContextValue = {
   sendText: (text: string) => void
   /** Cancels the running agent task (sends `stop`). */
   stopTask: () => void
+  /** Read the agent's spoken summary aloud (persisted; on by default). */
+  readAloud: boolean
+  setReadAloud: (on: boolean) => void
+  /** True while a spoken summary is playing (mic frames are paused). */
+  speaking: boolean
+  /** Stops the spoken summary now and resumes the mic. */
+  stopSpeaking: () => void
   clearEvents: () => void
 }
 

@@ -28,6 +28,10 @@ function makeValue(overrides: Partial<VoiceCoderContextValue> = {}): VoiceCoderC
     setMuted: vi.fn(),
     sendText: vi.fn(),
     stopTask: vi.fn(),
+    readAloud: true,
+    setReadAloud: vi.fn(),
+    speaking: false,
+    stopSpeaking: vi.fn(),
     clearEvents: vi.fn(),
     ...overrides,
   }
@@ -94,7 +98,7 @@ describe('mic toggle', () => {
     await user.click(screen.getByRole('button', { name: /mic/i }))
     expect(screen.getByRole('button', { name: /mic off/i })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('status')).toHaveTextContent('Paused')
-    expect(screen.getByRole('heading', { name: /microphone paused/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /mic\s*paused/i })).toBeInTheDocument()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('button', { name: /mic on/i })).toBeInTheDocument()
     await user.keyboard(' ')
@@ -140,7 +144,7 @@ describe('typed requests', () => {
 describe('splitter', () => {
   it('is a focusable vertical separator resized with arrows, Home and End', async () => {
     renderWith()
-    const splitter = screen.getByRole('separator', { name: /resize transcript panel/i })
+    const splitter = screen.getByRole('separator', { name: /resize activity panel/i })
     expect(splitter).toHaveAttribute('aria-orientation', 'vertical')
     expect(splitter).toHaveAttribute('aria-valuenow', '36')
     const user = userEvent.setup()
@@ -168,9 +172,9 @@ describe('splitter', () => {
 
 describe('header status and connection', () => {
   it.each([
-    [[], 'Listening for “hey VoiceCoder”'],
+    [[], 'Listening'],
     [[{ type: 'partial', seq: 0, text: 'hey' }], 'Hearing you…'],
-    [UTTERANCE.slice(0, 2), 'Processing — hold on'],
+    [UTTERANCE.slice(0, 2), 'Processing · hold on'],
     [[...UTTERANCE, WORKING], 'Agent working…'],
   ] as [ServerMessage[], string][])('shows the right status', (messages, text) => {
     renderWith({ messages: at(...messages) })
@@ -206,7 +210,8 @@ describe('activity entries', () => {
 
   it('intro', () => {
     renderWith()
-    expect(within(log()).getByRole('heading', { name: /listening\.\s*say “hey voicecoder” to start/i })).toBeInTheDocument()
+    expect(within(log()).getByRole('heading', { name: /listening\s*just talk/i })).toBeInTheDocument()
+    expect(within(log()).getByText(/say “hey voicecoder” or “coder,”/i)).toBeInTheDocument()
   })
 
   it('live partials are hidden from screen readers', () => {
@@ -254,7 +259,8 @@ describe('activity entries', () => {
     expect(card).toHaveTextContent('I added <b>tests</b>.')
     expect(card.querySelector('b')).toBeNull()
     expect(card).toHaveTextContent('2 files changed by this request')
-    expect(card).toHaveTextContent('Say “approve” to keep these changes, or ask me to undo them.')
+    expect(card).toHaveTextContent('Say approve to keep these changes, or ask me to undo them.')
+    expect(within(card).getByText('approve').tagName).toBe('STRONG')
     expect(card).not.toHaveTextContent(/reject/i)
     expect(within(log()).getByText(/listening for your next request/i)).toBeInTheDocument()
   })
@@ -286,5 +292,44 @@ describe('activity entries', () => {
   it('other errors show the bridge text', () => {
     renderWith({ messages: at({ type: 'error', text: 'Something else broke' }) })
     expect(within(log()).getByText('Something else broke')).toBeInTheDocument()
+  })
+})
+
+describe('read aloud', () => {
+  const RESULT = at(...UTTERANCE, WORKING, { type: 'agent_result', text: 'I added a test.', diff: '' })
+
+  it('is a pressed toggle that calls setReadAloud', async () => {
+    const { value } = renderWith()
+    const toggle = screen.getByRole('button', { name: /read aloud/i })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(toggle)
+    expect(value.setReadAloud).toHaveBeenCalledWith(false)
+  })
+
+  it('shows Off when the preference is off', () => {
+    renderWith({ readAloud: false })
+    expect(screen.getByRole('button', { name: /read aloud/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('while speaking: status says so and the latest result offers Stop reading', async () => {
+    const { value } = renderWith({ messages: RESULT, speaking: true })
+    expect(screen.getByRole('status')).toHaveTextContent('Reading aloud · mic paused')
+    const card = within(screen.getByRole('log')).getByRole('region', { name: 'Agent' })
+    expect(card).toHaveTextContent('Reading this aloud. Mic paused.')
+    await userEvent.click(within(card).getByRole('button', { name: /stop reading/i }))
+    expect(value.stopSpeaking).toHaveBeenCalledOnce()
+  })
+
+  it('Escape stops reading from anywhere on the page', async () => {
+    const { value } = renderWith({ messages: RESULT, speaking: true })
+    await userEvent.keyboard('{Escape}')
+    expect(value.stopSpeaking).toHaveBeenCalledOnce()
+  })
+
+  it('no reading row or Escape handling when nothing is being read', async () => {
+    const { value } = renderWith({ messages: RESULT, speaking: false })
+    expect(screen.queryByRole('button', { name: /stop reading/i })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(value.stopSpeaking).not.toHaveBeenCalled()
   })
 })

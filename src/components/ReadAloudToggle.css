@@ -1,0 +1,60 @@
+.read-aloud {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  min-width: 112px;
+  padding: 0 16px;
+  border: var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: 500 14px var(--font-sans);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.read-aloud:hover {
+  background: var(--block);
+}
+
+.read-aloud[aria-pressed="true"] {
+  background: var(--yellow);
+}
+
+.read-aloud[aria-pressed="true"]:hover {
+  background: var(--yellow-dark);
+}
+
+.read-aloud__icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.read-aloud__chip {
+  padding: 1px 8px;
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.read-aloud__chip--on {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--on-ink);
+}
+
+@media (forced-colors: active) {
+  .read-aloud[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .read-aloud__chip--on {
+    background: HighlightText;
+    color: Highlight;
+  }
+}

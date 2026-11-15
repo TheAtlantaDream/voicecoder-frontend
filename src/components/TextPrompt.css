@@ -1,18 +1,19 @@
-/* Sits at the bottom of the sage activity panel, below the scrolling log. */
+/* Sits at the bottom of the activity panel, below the scrolling log. */
 .prompt {
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 6px;
   padding: 14px 24px 18px;
-  border-top: 2px solid var(--on-sage);
-  color: var(--on-sage);
+  border-top: var(--line);
 }
 
 .prompt__label {
-  font: 14px var(--font-activity);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  align-self: flex-start;
+  padding: 3px 8px;
+  background: var(--block);
+  font: 13px/1.2 var(--font-pixel);
+  letter-spacing: 0.04em;
 }
 
 .prompt__row {
@@ -24,29 +25,28 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 44px;
-  padding: 0 12px;
-  border: 2px solid var(--on-sage);
-  border-radius: 10px;
-  background: var(--bg);
+  padding: 0 16px;
+  border: var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--white);
   color: var(--text);
-  font: 17px var(--font-ui);
+  font: 16px var(--font-sans);
 }
 
 .prompt__send {
   flex: none;
   min-height: 44px;
   min-width: 88px;
-  padding: 0 18px;
-  border: 2px solid var(--on-sage);
-  border-radius: 10px;
-  background: var(--on-sage);
-  color: var(--text);
-  font: 600 16px var(--font-ui);
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 500 16px var(--font-sans);
   cursor: pointer;
 }
 
 .prompt__send:hover {
-  background: var(--bg-deep);
   text-decoration: underline;
 }
 
@@ -58,11 +58,11 @@
 
 .prompt__hint {
   margin: 0;
-  font: 16px var(--font-activity);
+  font-size: 13px;
 }
 
 @media (forced-colors: active) {
-  .prompt {
-    border-top-color: CanvasText;
+  .prompt__send {
+    border: 2px solid ButtonText;
   }
 }

@@ -30,7 +30,7 @@ function readPanelPercent(): number {
  * a WAI-ARIA window splitter, and VS Code Web (right).
  */
 export function Workspace() {
-  const { status, muted, messages, events, editorSrc, stopTask } = useVoiceCoder()
+  const { status, muted, messages, events, editorSrc, stopTask, speaking, stopSpeaking } = useVoiceCoder()
   const mainRef = useRef<HTMLElement>(null)
   const draggingRef = useRef(false)
   const [panel, setPanel] = useState(readPanelPercent)
@@ -44,6 +44,16 @@ export function Workspace() {
       // Keep the width for this session only.
     }
   }, [panel])
+
+  // Escape stops a spoken summary from anywhere on the page (UPDATES_v2.md §9).
+  useEffect(() => {
+    if (!speaking) return
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') stopSpeaking()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [speaking, stopSpeaking])
 
   const activity = deriveActivity(messages, { muted })
   const everConnected = events.some((e) => e.kind === 'status' && e.text === 'connected')
@@ -97,11 +107,22 @@ export function Workspace() {
 
   return (
     <div className="page">
-      <BridgeStatus phase={activity.phase} muted={muted} connection={connection} announcement={announcement} />
+      <BridgeStatus
+        phase={activity.phase}
+        muted={muted}
+        speaking={speaking}
+        connection={connection}
+        announcement={announcement}
+      />
       {connection === 'reconnecting' && <ConnectionAlert />}
       <main ref={mainRef} className="workspace">
         <div className="workspace__panel">
-          <EventLog entries={activity.entries} onStop={stopTask} footer={<TextPrompt />} />
+          <EventLog
+            entries={activity.entries}
+            onStop={stopTask}
+            onStopReading={speaking ? stopSpeaking : undefined}
+            footer={<TextPrompt />}
+          />
         </div>
         {/* A focusable role="separator" is an interactive widget (WAI-ARIA window splitter),
             which jsx-a11y doesn't model. */}
@@ -110,12 +131,12 @@ export function Workspace() {
           className="workspace__splitter"
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize transcript panel"
+          aria-label="Resize activity panel"
           aria-controls="activity-log"
           aria-valuenow={panel}
           aria-valuemin={MIN_PANEL}
           aria-valuemax={MAX_PANEL}
-          aria-valuetext={`Transcript panel ${panel}% of the width`}
+          aria-valuetext={`Activity panel ${panel}% of the width`}
           tabIndex={0}
           onKeyDown={onKeyDown}
           onPointerDown={onPointerDown}

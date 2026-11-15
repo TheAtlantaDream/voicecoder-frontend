@@ -2,26 +2,29 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--sage);
-  color: var(--on-sage);
-  font: 19px/1.55 var(--font-activity);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .activity__heading {
+  display: flex;
   margin: 0;
-  padding: 16px 24px 4px;
-  font: 400 15px var(--font-activity);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  padding: 18px 24px 4px;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+.activity__tag {
+  background: var(--sage);
 }
 
 .activity__log {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 0;
-  padding: 10px 24px 20px;
+  padding: 12px 24px 20px;
   overflow: auto;
   /* Scrollbar hidden visually; the log still scrolls with the wheel, touch and
      the keyboard (it is focusable), and auto-follows new entries. */
@@ -33,7 +36,7 @@
 }
 
 @media (forced-colors: active) {
-  .activity {
-    border-right: 1px solid CanvasText;
+  .activity__tag {
+    border: 1px solid CanvasText;
   }
 }

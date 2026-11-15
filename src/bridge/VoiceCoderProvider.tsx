@@ -21,6 +21,18 @@ type VoiceCoderProviderProps = {
 
 const RECONNECT_MS = 1500
 
+/** localStorage key for the Read aloud toggle. */
+export const READ_ALOUD_KEY = 'voicecoder.readAloud'
+
+/** Read aloud is on unless the user turned it off (storage can be blocked). */
+function readReadAloudPref(): boolean {
+  try {
+    return localStorage.getItem(READ_ALOUD_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
 export function VoiceCoderProvider({
   children,
   url = DEFAULT_BRIDGE_URL,
@@ -38,6 +50,8 @@ export function VoiceCoderProvider({
   const [agentSummary, setAgentSummary] = useState<string | null>(null)
   const [agentDiff, setAgentDiff] = useState<string | null>(null)
   const [editorSrc, setEditorSrc] = useState(editorFolderSrc)
+  const [readAloud, setReadAloudState] = useState(readReadAloudPref)
+  const [speaking, setSpeaking] = useState(false)
 
   const socketRef = useRef<WebSocket | null>(null)
   const socketGen = useRef(0)
@@ -53,11 +67,13 @@ export function VoiceCoderProvider({
   // Latest openSocket, so the reconnect timer can call it without referencing itself.
   const reconnectRef = useRef<() => void>(() => {})
   const speechRef = useRef<HTMLAudioElement | null>(null)
+  const readAloudRef = useRef(readAloud)
 
   const stopSpeech = useCallback(() => {
     const audio = speechRef.current
     speechRef.current = null
     audio?.pause()
+    setSpeaking(false)
   }, [])
 
   // While the summary plays, mic audio is not sent, so the bridge does not
@@ -65,14 +81,23 @@ export function VoiceCoderProvider({
   const playSpeech = useCallback(
     (base64: string) => {
       stopSpeech()
+      // Read aloud off: the summary is still shown, just not spoken.
+      if (!readAloudRef.current) return
       const audio = new Audio(`data:audio/mpeg;base64,${base64}`)
       const done = () => {
-        if (speechRef.current === audio) speechRef.current = null
+        if (speechRef.current !== audio) return
+        speechRef.current = null
+        setSpeaking(false)
       }
       audio.onended = done
       audio.onerror = done
       speechRef.current = audio
-      audio.play().catch(done)
+      setSpeaking(true)
+      audio.play().catch((error: unknown) => {
+        // Never block the flow if playback fails (e.g. autoplay policy).
+        console.warn('[voicecoder] could not play the spoken summary', error)
+        done()
+      })
     },
     [stopSpeech],
   )
@@ -289,6 +314,20 @@ export function VoiceCoderProvider({
     [ensureMic, push, send, stopMic, stopSpeech],
   )
 
+  const setReadAloud = useCallback(
+    (next: boolean) => {
+      readAloudRef.current = next
+      setReadAloudState(next)
+      try {
+        localStorage.setItem(READ_ALOUD_KEY, String(next))
+      } catch {
+        // Storage blocked: keep the choice for this session only.
+      }
+      if (!next) stopSpeech()
+    },
+    [stopSpeech],
+  )
+
   const sendText = useCallback(
     (text: string) => {
       if (!text) return
@@ -342,6 +381,10 @@ export function VoiceCoderProvider({
       setMuted,
       sendText,
       stopTask,
+      readAloud,
+      setReadAloud,
+      speaking,
+      stopSpeaking: stopSpeech,
       clearEvents,
     }),
     [
@@ -362,6 +405,10 @@ export function VoiceCoderProvider({
       setMuted,
       sendText,
       stopTask,
+      readAloud,
+      setReadAloud,
+      speaking,
+      stopSpeech,
       clearEvents,
     ],
   )

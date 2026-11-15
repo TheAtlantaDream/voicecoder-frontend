@@ -1,33 +1,31 @@
+/* Mic toggle: off = grey → hover mint → on = coral → hover dark coral. CSS only. */
 .mic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 36px;
-  min-width: 104px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--mic-off);
-  color: #f0f0f0;
-  font: 600 14px var(--font-ui);
+  min-width: 112px;
+  padding: 0 16px;
+  border: var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--block);
+  color: var(--text);
+  font: 500 14px var(--font-sans);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
 
 .mic:hover {
-  background: var(--accent);
-  color: #0e1a0e;
+  background: var(--mint);
 }
 
 .mic[aria-pressed="true"] {
-  background: var(--mic-on);
-  color: #fff;
+  background: var(--coral);
 }
 
 .mic[aria-pressed="true"]:hover {
-  background: var(--mic-on-hover);
-  color: #fff;
+  background: var(--coral-dark);
 }
 
 .mic__icon {
@@ -37,10 +35,6 @@
 }
 
 @media (forced-colors: active) {
-  .mic {
-    border: 1px solid ButtonText;
-  }
-
   .mic[aria-pressed="true"] {
     forced-color-adjust: none;
     background: Highlight;

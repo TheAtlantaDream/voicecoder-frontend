@@ -2,25 +2,20 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
-  padding: 12px 22px;
-  background: var(--bg-deep);
-  border-bottom: 1px solid var(--line);
+  gap: 14px 18px;
+  padding: 14px 22px;
+  border-bottom: var(--line);
+  background: var(--bg);
 }
 
 .topbar p {
   margin: 0;
 }
 
-/* Sage text is allowed here: the header is --bg-deep. */
 .topbar__brand {
-  color: var(--sage);
-  font: 24px/1.2 var(--font-brand);
-}
-
-.topbar__status {
-  color: var(--sage);
-  font: 14px var(--font-mono);
+  padding: 6px 10px;
+  background: var(--block);
+  font: 22px/1 var(--font-pixel);
 }
 
 .topbar .topbar__connection {
@@ -28,8 +23,6 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
-  color: var(--text-muted);
-  font: 13px var(--font-mono);
 }
 
 .topbar__dot {
@@ -41,12 +34,12 @@
 
 .topbar__dot--ring {
   background: transparent;
-  border: 2px solid var(--text-muted);
+  border: 2px solid var(--text);
 }
 
 @media (forced-colors: active) {
-  .topbar {
-    border-bottom-color: CanvasText;
+  .topbar__brand {
+    border: 1px solid CanvasText;
   }
 
   .topbar__dot {
