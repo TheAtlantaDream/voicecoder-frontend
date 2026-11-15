@@ -19,14 +19,18 @@ export function editorFolderSrc(): string {
 /**
  * Open the latest agent diff in the editor iframe.
  * Uses VS Code web's `payload` openFile (same as code-server / vscode.dev).
+ *
+ * The URL is stable on purpose: changing the iframe src restarts all of VS Code,
+ * so the diff is opened once, and later runs just rewrite latest.diff, which
+ * VS Code refreshes in place. Pass `bust` only to force a reopen.
  */
-export function editorDiffSrc(bust = Date.now()): string {
+export function editorDiffSrc(bust?: number): string {
   const host = typeof window !== 'undefined' ? window.location.host : 'localhost'
   const openFile = `vscode-remote://${host}${LATEST_DIFF_FILE}`
   const payload = JSON.stringify([['openFile', openFile]])
   return (
     `${editorBase()}/?folder=${encodeURIComponent(EDITOR_FOLDER)}` +
     `&payload=${encodeURIComponent(payload)}` +
-    `&t=${bust}`
+    (bust === undefined ? '' : `&t=${bust}`)
   )
 }
